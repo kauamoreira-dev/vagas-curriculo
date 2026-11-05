@@ -1,0 +1,50 @@
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--blue-900);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/*
+ * O PNG oficial tem uma margem transparente de ~13% em cada lado.
+ * A moldura recorta só essa margem (via CSS), para que o símbolo
+ * ocupe exatamente --logo-size sem alterar o arquivo.
+ */
+.mark {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--logo-size);
+  height: var(--logo-size);
+  overflow: hidden;
+}
+
+.image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--logo-size) * 1.35);
+  height: calc(var(--logo-size) * 1.35);
+  max-width: none;
+  transform: translate(-50%, -50%);
+}
+
+.name {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.primary {
+  font-family: var(--font-body);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.secondary {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.12em;
+  color: var(--blue-700);
+}

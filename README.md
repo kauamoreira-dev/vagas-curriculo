@@ -29,18 +29,26 @@ Acesse http://localhost:5174
 ## Estrutura
 
 ```
+public/brand/         logo oficial (não editar o arquivo)
 src/
-  assets/       imagens e arquivos estáticos importados no código
-  components/   componentes reutilizáveis
-  pages/        telas da aplicação
-  hooks/        hooks customizados
-  services/     acesso a APIs e integrações
-  utils/        funções auxiliares
-  App.jsx       componente raiz
-  main.jsx      ponto de entrada
+  components/
+    layout/           Header, Footer, Logo e layouts das páginas
+    ui/               componentes básicos (Button)
+    resume/           folha A4 e os modelos de currículo (templates/)
+    editor/           formulário do editor
+  data/               catálogo de modelos, currículo vazio e exemplo fictício
+  hooks/              useResumeDraft (rascunho local), useElementWidth
+  pages/              Home, Templates (/modelos), Editor (/editor), NotFound
+  utils/              funções auxiliares (texto, ids, localStorage)
+  index.css           tokens de design (cores, tipografia, espaços) e estilos globais
 ```
 
-Importações podem usar o alias `@` para `src/` (ex.: `import Botao from '@/components/Botao'`).
+Rotas: `/` (início), `/modelos`, `/editor` (aceita `?modelo=classico|moderno|essencial`).
+
+Importações podem usar o alias `@` para `src/` (ex.: `import { Button } from '@/components/ui/Button'`).
+
+Para adicionar um modelo: crie o componente e o CSS em `src/components/resume/templates/`,
+registre-o em `ResumeDocument.jsx` e adicione os metadados em `src/data/templates.js`.
 
 ## Variáveis de ambiente
 
