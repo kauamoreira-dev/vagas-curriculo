@@ -58,3 +58,42 @@ export function pdfPages(buffer) {
       return [...contents.matchAll(/(\d+) 0 R/g)].map(([, id]) => streamOf(objects.get(id))).join('\n')
     })
 }
+
+/** Envia uma foto (PNG gerado no navegador) pelo campo do editor e confirma o recorte. */
+export async function uploadPhoto(page, { width = 600, height = 400 } = {}) {
+  const png = await page.evaluate(
+    ({ width, height }) => {
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const context = canvas.getContext('2d')
+      context.fillStyle = '#3a7'
+      context.fillRect(0, 0, width, height)
+      return canvas.toDataURL('image/png').split(',')[1]
+    },
+    { width, height },
+  )
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'foto.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(png, 'base64'),
+  })
+  await page.getByRole('button', { name: 'Usar esta foto' }).click()
+  await expect(page.getByRole('img', { name: 'Sua foto de perfil' })).toBeVisible()
+}
+
+/** Imagens embutidas no PDF: largura, altura e compressão (DCTDecode = JPEG). */
+export function pdfImages(buffer) {
+  return [...buffer.toString('latin1').matchAll(/\/Subtype\s*\/Image\b[^]*?>>/g)].map(([dict]) => ({
+    width: Number(dict.match(/\/Width\s+(\d+)/)?.[1]),
+    height: Number(dict.match(/\/Height\s+(\d+)/)?.[1]),
+    jpeg: /\/DCTDecode/.test(dict),
+  }))
+}
+
+/** Imagens desenhadas numa página (operador Do), com a escala horizontal e vertical aplicada. */
+export function pdfImageDraws(content) {
+  return [...content.matchAll(/([-\d.]+) 0 0 ([-\d.]+) [-\d.]+ [-\d.]+ cm(?:\n(?!.*\bDo\b).*){0,4}\n\/\w+ Do/g)].map(
+    ([, scaleX, scaleY]) => ({ width: Math.abs(Number(scaleX)), height: Math.abs(Number(scaleY)) }),
+  )
+}

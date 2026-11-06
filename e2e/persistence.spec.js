@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test'
-import { INDEX_KEY, LEGACY_KEY, createResume, expectSaved, fillWithSample, savedResumes } from './helpers'
+import {
+  INDEX_KEY,
+  LEGACY_KEY,
+  createResume,
+  expectSaved,
+  fillWithSample,
+  savedResumes,
+  uploadPhoto,
+} from './helpers'
 
 const listItems = (page) => page.getByRole('listitem').getByRole('heading', { level: 2 })
 
@@ -74,22 +82,7 @@ test('cancelar a exclusão mantém o currículo', async ({ page }) => {
 test('a foto enviada é salva e aparece na lista', async ({ page }) => {
   const id = await createResume(page)
   await page.getByLabel(/Nome completo/).fill('Ana Souza')
-  const png = await page.evaluate(() => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 600
-    canvas.height = 400
-    const context = canvas.getContext('2d')
-    context.fillStyle = '#3a7'
-    context.fillRect(0, 0, 600, 400)
-    return canvas.toDataURL('image/png').split(',')[1]
-  })
-  await page.locator('input[type="file"]').setInputFiles({
-    name: 'foto.png',
-    mimeType: 'image/png',
-    buffer: Buffer.from(png, 'base64'),
-  })
-  await page.getByRole('button', { name: 'Usar esta foto' }).click()
-  await expect(page.getByRole('img', { name: 'Sua foto de perfil' })).toBeVisible()
+  await uploadPhoto(page)
   await expectSaved(page, (record) => record.id === id && record.resume.personal.photo.startsWith('data:image/jpeg'))
 
   await page.goto('/curriculos')

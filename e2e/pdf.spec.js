@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { createResume, fillWithSample, pdfPages } from './helpers'
+import { createResume, fillWithSample, pdfImageDraws, pdfImages, pdfPages, uploadPhoto } from './helpers'
 
 /*
  * PDF de verdade, gerado pelo Chromium a partir do CSS de impressão (como no "Salvar PDF").
@@ -62,6 +62,45 @@ for (const template of TEMPLATES) {
     }
   })
 }
+
+test.describe('foto de perfil', () => {
+  test.beforeEach(async ({ page }) => {
+    await uploadPhoto(page)
+  })
+
+  for (const template of TEMPLATES) {
+    test(`aparece no PDF do modelo ${template}: o JPEG 400×400 desenhado uma vez, quadrado`, async ({ page }) => {
+      await page.getByRole('radio', { name: template }).click()
+      const buffer = await page.pdf({ preferCSSPageSize: true, printBackground: true })
+
+      // A foto preparada pelo app (recorte quadrado em JPEG de 400 px) vai embutida sem conversão.
+      expect(pdfImages(buffer)).toEqual([{ width: 400, height: 400, jpeg: true }])
+      const [firstPage, ...rest] = pdfPages(buffer)
+      const draws = pdfImageDraws(firstPage)
+      expect(draws).toHaveLength(1)
+      expect(draws[0].width).toBeGreaterThan(0)
+      expect(draws[0].width).toBeCloseTo(draws[0].height, 3)
+      for (const content of rest) expect(pdfImageDraws(content)).toEqual([])
+    })
+  }
+
+  test('fica fora do PDF quando a pessoa a oculta', async ({ page }) => {
+    await page.getByRole('checkbox', { name: 'Mostrar foto no currículo' }).uncheck()
+    for (const template of TEMPLATES) {
+      await page.getByRole('radio', { name: template }).click()
+      const buffer = await page.pdf({ preferCSSPageSize: true, printBackground: true })
+      expect(pdfImages(buffer), template).toEqual([])
+      expect(pdfImageDraws(pdfPages(buffer)[0]), template).toEqual([])
+    }
+  })
+
+  test('no Moderno, a foto não apaga a coluna azul', async ({ page }) => {
+    await page.getByRole('radio', { name: 'Moderno' }).click()
+    const [content] = await printPdf(page)
+    expect(Math.max(0, ...blueColumnHeights(content))).toBeGreaterThanOrEqual(FULL_PAGE)
+    expect(pdfImageDraws(content)).toHaveLength(1)
+  })
+})
 
 test('na impressão só a folha aparece, sem a interface do editor', async ({ page }) => {
   await page.getByRole('radio', { name: 'Essencial' }).click()
