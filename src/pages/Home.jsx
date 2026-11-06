@@ -62,7 +62,7 @@ export function Home() {
               modelos, sem cadastro.
             </p>
             <div className={styles.actions}>
-              <Button to="/editor">Criar meu currículo</Button>
+              <Button to="/curriculos">Criar meu currículo</Button>
               <Button to="/modelos" variant="secondary">
                 Ver modelos
               </Button>

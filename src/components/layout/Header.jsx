@@ -54,7 +54,7 @@ export function Header() {
               </li>
             ))}
           </ul>
-          <Button to="/editor" size="sm" className={styles.cta} onClick={close}>
+          <Button to="/curriculos" size="sm" className={styles.cta} onClick={close}>
             Criar currículo
           </Button>
         </nav>
