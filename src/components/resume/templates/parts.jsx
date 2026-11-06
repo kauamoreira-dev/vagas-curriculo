@@ -139,8 +139,9 @@ export function SkillsList({ skills, styles }) {
   return (
     <Section title="Habilidades" styles={styles}>
       <ul className={styles.skills}>
-        {items.map((skill) => (
-          <li key={skill}>{skill}</li>
+        {/* Pela posição: a pessoa pode repetir uma habilidade, e o texto não serve de chave */}
+        {items.map((skill, index) => (
+          <li key={index}>{skill}</li>
         ))}
       </ul>
     </Section>
