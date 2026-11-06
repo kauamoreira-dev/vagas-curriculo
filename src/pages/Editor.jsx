@@ -6,24 +6,11 @@ import { Logo } from '@/components/layout/Logo'
 import { ResumeDocument } from '@/components/resume/ResumeDocument'
 import { ScaledSheet } from '@/components/resume/ScaledSheet'
 import { Button } from '@/components/ui/Button'
-import { SAMPLE_RESUME } from '@/data/resume'
+import { SAMPLE_RESUME, hasResumeContent } from '@/data/resume'
 import { TEMPLATES, getTemplate } from '@/data/templates'
 import { useResumeDraft } from '@/hooks/useResumeDraft'
-import { hasEducationContent, hasExperienceContent } from '@/utils/resumeText'
 import { validateResume } from '@/utils/validation'
 import styles from './Editor.module.css'
-
-function hasContent(resume) {
-  const { personal } = resume
-  return Boolean(
-    // Só campos de texto contam (ex.: `photoVisible` é booleano).
-    Object.values(personal).some((value) => typeof value === 'string' && value.trim()) ||
-    resume.summary.trim() ||
-    resume.skills.trim() ||
-    resume.experience.some(hasExperienceContent) ||
-    resume.education.some(hasEducationContent),
-  )
-}
 
 export function Editor() {
   const draft = useResumeDraft()
@@ -55,7 +42,7 @@ export function Editor() {
   }
 
   function fillWithSample() {
-    if (hasContent(resume) && !window.confirm('Substituir o conteúdo atual pelo exemplo fictício?'))
+    if (hasResumeContent(resume) && !window.confirm('Substituir o conteúdo atual pelo exemplo fictício?'))
       return
     draft.replaceResume(SAMPLE_RESUME)
     restartValidation()
@@ -93,7 +80,7 @@ export function Editor() {
     window.print()
   }
 
-  const isEmpty = !hasContent(resume)
+  const isEmpty = !hasResumeContent(resume)
 
   return (
     <div className={styles.app}>

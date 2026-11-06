@@ -1,43 +1,56 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createEmptyEducation, createEmptyExperience, createEmptyResume } from '@/data/resume'
-import { DEFAULT_TEMPLATE_ID, getTemplate } from '@/data/templates'
+import { getTemplate } from '@/data/templates'
+import { resumeStore } from '@/services/resumeStore'
 import { createId } from '@/utils/id'
-import { readJSON, removeKey, writeJSON } from '@/utils/storage'
 
-const STORAGE_KEY = 'vagas-curriculo:rascunho:v1'
+// Espera após a última alteração antes de gravar: evita regravar a foto a cada tecla.
+const SAVE_DELAY = 400
 
+// Abre o currículo mais recente; sem nenhum salvo, um novo (gravado só na primeira alteração).
 function loadDraft() {
-  const saved = readJSON(STORAGE_KEY)
-  if (!saved || typeof saved !== 'object' || !saved.resume) {
-    return { templateId: DEFAULT_TEMPLATE_ID, resume: createEmptyResume() }
-  }
-  const empty = createEmptyResume()
-  return {
-    templateId: getTemplate(saved.templateId) ? saved.templateId : DEFAULT_TEMPLATE_ID,
-    resume: {
-      ...empty,
-      ...saved.resume,
-      personal: { ...empty.personal, ...saved.resume.personal },
-    },
-  }
+  const recent = resumeStore.listResumes()[0]
+  const record = recent ? resumeStore.getResume(recent.id) : null
+  return record ?? resumeStore.getUnmigratedLegacy() ?? resumeStore.newRecord()
 }
 
 /**
- * Estado do currículo em edição. O rascunho é salvo automaticamente
- * no navegador deste dispositivo (localStorage) — não há envio para servidor.
+ * Estado do currículo em edição. É salvo automaticamente no navegador deste dispositivo
+ * (localStorage, via `resumeStore`) — não há envio para servidor.
  */
 export function useResumeDraft() {
   const [draft, setDraft] = useState(loadDraft)
   const [storageAvailable, setStorageAvailable] = useState(true)
-  const isFirstRender = useRef(true)
+  const lastSaved = useRef(draft)
+  const pending = useRef(null)
+
+  // Grava a versão pendente, se houver. Também chamada ao sair da página e ao desmontar.
+  const flush = useCallback(() => {
+    const record = pending.current
+    if (!record) return
+    pending.current = null
+    const saved = resumeStore.saveResume(record)
+    lastSaved.current = record
+    setStorageAvailable(Boolean(saved))
+  }, [])
 
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
-      return
+    if (draft === lastSaved.current) return undefined
+    pending.current = draft
+    const timer = setTimeout(flush, SAVE_DELAY)
+    return () => clearTimeout(timer)
+  }, [draft, flush])
+
+  useEffect(() => {
+    const flushWhenHidden = () => document.visibilityState === 'hidden' && flush()
+    window.addEventListener('pagehide', flush)
+    document.addEventListener('visibilitychange', flushWhenHidden)
+    return () => {
+      window.removeEventListener('pagehide', flush)
+      document.removeEventListener('visibilitychange', flushWhenHidden)
+      flush()
     }
-    setStorageAvailable(writeJSON(STORAGE_KEY, draft))
-  }, [draft])
+  }, [flush])
 
   const updateResume = useCallback((updater) => {
     setDraft((current) => ({ ...current, resume: updater(current.resume) }))
@@ -115,8 +128,8 @@ export function useResumeDraft() {
     }))
   }, [])
 
+  // Esvazia o currículo aberto (ele continua salvo, sem conteúdo).
   const resetDraft = useCallback(() => {
-    removeKey(STORAGE_KEY)
     setDraft((current) => ({ ...current, resume: createEmptyResume() }))
   }, [])
 
