@@ -54,7 +54,8 @@
 .section {
   display: grid;
   grid-template-columns: 150px 1fr;
-  gap: 24px;
+  align-items: start;
+  gap: 14px 24px;
   padding: 18px 0;
   border-bottom: 1px solid #e4e4e4;
 }
@@ -64,6 +65,8 @@
 }
 
 .sectionTitle {
+  grid-column: 1;
+  grid-row: 1;
   padding-top: 2px;
   font-family: var(--font-mono);
   font-size: 11px;
@@ -73,9 +76,13 @@
   color: #666;
 }
 
+/* Cada item vira uma linha do grid; o título divide a 1ª linha com o 1º item. */
 .sectionBody {
-  display: grid;
-  gap: 14px;
+  display: contents;
+}
+
+.sectionBody > * {
+  grid-column: 2;
 }
 
 .paragraph {
@@ -129,4 +136,26 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/*
+ * Impressão: margens verticais vêm do @page; blocos não se partem entre páginas.
+ * Como título e 1º item estão na mesma linha do grid e o item não se parte,
+ * os dois vão juntos para a próxima página quando não cabem.
+ */
+@media print {
+  .page {
+    min-height: 0;
+    padding-block: 0;
+  }
+
+  .top,
+  .entry {
+    break-inside: avoid;
+  }
+
+  .paragraph {
+    orphans: 3;
+    widows: 3;
+  }
 }

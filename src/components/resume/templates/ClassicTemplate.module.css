@@ -136,3 +136,25 @@
   margin: 0 8px;
   color: #9aa3b1;
 }
+
+/* Impressão: margens verticais vêm do @page; blocos não se partem entre páginas */
+@media print {
+  .page {
+    min-height: 0;
+    padding-block: 0;
+  }
+
+  .identity,
+  .entry {
+    break-inside: avoid;
+  }
+
+  .sectionTitle {
+    break-after: avoid;
+  }
+
+  .paragraph {
+    orphans: 3;
+    widows: 3;
+  }
+}

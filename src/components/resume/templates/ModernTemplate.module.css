@@ -141,3 +141,29 @@
   border-radius: 4px;
   color: #fff;
 }
+
+/* Impressão: margens verticais vêm do @page; blocos não se partem entre páginas */
+@media print {
+  .page {
+    min-height: 0;
+  }
+
+  .aside,
+  .main {
+    padding-block: 0;
+  }
+
+  .identity,
+  .entry {
+    break-inside: avoid;
+  }
+
+  .sectionTitle {
+    break-after: avoid;
+  }
+
+  .paragraph {
+    orphans: 3;
+    widows: 3;
+  }
+}

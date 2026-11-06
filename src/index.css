@@ -130,9 +130,13 @@ select {
 }
 
 /* Impressão: só a folha do currículo vai para o papel/PDF */
+/*
+ * Margem vertical na própria página impressa, para que se repita em todas as folhas
+ * do PDF. As margens laterais continuam vindo do padding de cada modelo.
+ */
 @page {
   size: A4;
-  margin: 0;
+  margin: 14mm 0;
 }
 
 @media screen {
