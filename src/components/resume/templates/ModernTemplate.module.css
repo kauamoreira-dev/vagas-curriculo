@@ -153,10 +153,50 @@
   color: #fff;
 }
 
+/*
+ * Coluna azul no PDF, na altura inteira de todas as folhas:
+ * - `.page::before` (abaixo) cobre a área de conteúdo de cada folha;
+ * - as caixas de margem desta página nomeada cobrem as margens de 14mm do @page global.
+ *   Usam borda, não fundo: o Chrome omite fundos quando "Gráficos de fundo" está desmarcado.
+ */
+@page moderno {
+  @top-left {
+    content: '';
+    width: 0;
+    border-left: 250px solid #0b2470;
+  }
+
+  @bottom-left {
+    content: '';
+    width: 0;
+    border-left: 250px solid #0b2470;
+  }
+}
+
 /* Impressão: margens verticais vêm do @page; blocos não se partem entre páginas */
 @media print {
   .page {
-    min-height: 0;
+    /* Altura da área útil da folha (A4 menos as margens de 14mm): a coluna preenche a 1ª folha
+       mesmo com pouco conteúdo */
+    min-height: calc(297mm - 28mm);
+    background: none;
+    page: moderno;
+  }
+
+  /*
+   * Faixa fixa: no PDF se repete em cada folha. A coluna fica por cima, na mesma cor.
+   * Os -14mm avançam sobre as margens onde o navegador permitir (o Chrome recorta na área útil;
+   * lá as caixas de margem acima completam o azul).
+   */
+  .page::before {
+    content: '';
+    position: fixed;
+    top: -14mm;
+    bottom: -14mm;
+    left: 0;
+    z-index: -1;
+    width: 250px;
+    background: #0b2470;
   }
 
   .aside,
