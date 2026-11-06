@@ -35,6 +35,11 @@ for (const width of [320, 375]) {
       ['/', page.getByRole('button', { name: /menu/i })],
     ]) {
       await page.goto(route)
+      // Mede com as fontes da logo já carregadas: antes disso o nome aparece na fonte reserva do
+      // sistema, que no Linux do CI é mais larga e deixa só ~3px (instável, não reflete o site pronto).
+      await page.evaluate(() =>
+        Promise.all([document.fonts.load('700 1em "Public Sans"'), document.fonts.load('italic 400 1em Newsreader')]),
+      )
       const logo = await page.getByRole('link', { name: `${NAME} — página inicial` }).first().boundingBox()
       const next = await control.boundingBox()
       expect(next.x - (logo.x + logo.width), `${route}: espaço entre a logo e o botão`).toBeGreaterThanOrEqual(8)
