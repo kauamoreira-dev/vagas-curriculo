@@ -40,6 +40,11 @@
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--gray-500);
+  text-decoration: none;
+}
+
+.crumb:hover {
+  color: var(--blue-700);
 }
 
 .templatePicker {
@@ -149,6 +154,35 @@
   display: flex;
   gap: 8px;
   margin-top: 24px;
+}
+
+.titleField {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+/* Currículo inexistente (/editor/:id com id desconhecido) */
+.missing {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  max-width: 560px;
+  padding: 48px var(--gutter);
+  color: var(--gray-700);
+}
+
+.missingTitle {
+  margin-top: 24px;
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 400;
+  color: var(--blue-900);
+}
+
+.missingActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .formFooter {

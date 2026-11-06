@@ -174,6 +174,15 @@ describe('saveResume e listResumes', () => {
     expect(store.saveResume({ ...store.newRecord(), resume: SAMPLE_RESUME })).toBeNull()
   })
 
+  it('usa o título escolhido e volta ao gerado quando ele fica vazio', () => {
+    const store = createResumeStore(createMemoryStorage(), { now })
+    const saved = store.saveResume({ ...store.newRecord(), resume: SAMPLE_RESUME, title: '  Vaga no banco  ' })
+    expect(store.listResumes()[0].title).toBe('Vaga no banco')
+    expect(store.getResume(saved.id).title).toBe('  Vaga no banco  ')
+    store.saveResume({ ...saved, title: '   ' })
+    expect(store.listResumes()[0].title).toBe('Marina Albuquerque · Analista de Dados')
+  })
+
   it('reconcilia índice e currículos gravados', () => {
     const storage = createMemoryStorage()
     const store = createResumeStore(storage, { now })
@@ -183,5 +192,35 @@ describe('saveResume e listResumes', () => {
     const orphan = { ...store.newRecord(), resume: SAMPLE_RESUME }
     storage.setItem(RESUME_PREFIX + orphan.id, JSON.stringify(orphan)) // fora do índice: entra na lista
     expect(store.listResumes().map((item) => item.id).sort()).toEqual([kept.id, orphan.id].sort())
+  })
+})
+
+describe('deleteResume e duplicateResume', () => {
+  it('exclui o currículo e o tira da lista', () => {
+    const storage = createMemoryStorage()
+    const store = createResumeStore(storage, { now })
+    const first = store.saveResume({ ...store.newRecord(), resume: SAMPLE_RESUME })
+    const second = store.saveResume(store.newRecord())
+    expect(store.deleteResume(first.id)).toBe(true)
+    expect(store.listResumes().map((item) => item.id)).toEqual([second.id])
+    expect(store.getResume(first.id)).toBeNull()
+  })
+
+  it('duplica com novo id, título "(cópia)" e dados independentes', () => {
+    const store = createResumeStore(createMemoryStorage(), { now })
+    const original = store.saveResume({ ...store.newRecord({ templateId: 'moderno' }), resume: SAMPLE_RESUME })
+    const copy = store.duplicateResume(original.id)
+
+    expect(copy.id).not.toBe(original.id)
+    expect(copy).toMatchObject({ templateId: 'moderno', title: 'Marina Albuquerque · Analista de Dados (cópia)' })
+    expect(store.listResumes().map((item) => item.id)).toEqual([copy.id, original.id])
+
+    store.saveResume({ ...copy, resume: { ...copy.resume, summary: 'Alterado' } })
+    expect(store.getResume(original.id).resume.summary).toBe(SAMPLE_RESUME.summary)
+  })
+
+  it('duplicar um id inexistente retorna null', () => {
+    const store = createResumeStore(createMemoryStorage(), { now })
+    expect(store.duplicateResume('nao-existe')).toBeNull()
   })
 })

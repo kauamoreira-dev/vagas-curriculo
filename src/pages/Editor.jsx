@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ResumeForm } from '@/components/editor/ResumeForm'
+import { TextField } from '@/components/editor/fields'
 import { Logo } from '@/components/layout/Logo'
 import { ResumeDocument } from '@/components/resume/ResumeDocument'
 import { ScaledSheet } from '@/components/resume/ScaledSheet'
@@ -12,8 +13,42 @@ import { useResumeDraft } from '@/hooks/useResumeDraft'
 import { validateResume } from '@/utils/validation'
 import styles from './Editor.module.css'
 
+// Rota /editor/:id? — escolhe o currículo e mostra a área de edição.
 export function Editor() {
-  const draft = useResumeDraft()
+  const { id } = useParams()
+  const draft = useResumeDraft(id)
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // /editor (sem id) passa a apontar para o currículo aberto assim que ele estiver salvo.
+  useEffect(() => {
+    if (!id && draft.persisted && draft.resumeId) {
+      navigate({ pathname: `/editor/${draft.resumeId}`, search: location.search }, { replace: true })
+    }
+  }, [id, draft.persisted, draft.resumeId, navigate, location.search])
+
+  if (draft.notFound) return <MissingResume />
+  // A chave recria a área de edição (validação, aba ativa) ao trocar de currículo.
+  return <EditorWorkspace key={draft.resumeId} draft={draft} />
+}
+
+function MissingResume() {
+  return (
+    <div className={styles.missing}>
+      <Logo />
+      <h1 className={styles.missingTitle}>Currículo não encontrado</h1>
+      <p>Ele pode ter sido excluído ou foi salvo em outro navegador.</p>
+      <div className={styles.missingActions}>
+        <Button to="/curriculos">Ver meus currículos</Button>
+        <Button to="/editor" variant="secondary">
+          Abrir o mais recente
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function EditorWorkspace({ draft }) {
   const { resume, templateId, setTemplateId } = draft
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState('form')
@@ -88,7 +123,9 @@ export function Editor() {
         <header className={styles.topbar}>
           <div className={styles.brand}>
             <Logo />
-            <span className={styles.crumb}>Editor</span>
+            <Link to="/curriculos" className={styles.crumb}>
+              Meus currículos
+            </Link>
           </div>
 
           <div className={styles.templatePicker} role="radiogroup" aria-label="Modelo do currículo">
@@ -149,6 +186,15 @@ export function Editor() {
                 ? 'Rascunho salvo automaticamente neste navegador.'
                 : 'Não foi possível salvar o rascunho neste navegador. Salve em PDF antes de sair.'}
             </p>
+            <div className={styles.titleField}>
+              <TextField
+                label="Nome deste currículo"
+                value={draft.title}
+                onChange={draft.setTitle}
+                placeholder={draft.autoTitle}
+                hint="Aparece só na sua lista de currículos. Em branco, usamos seu nome e cargo."
+              />
+            </div>
             <ResumeForm
               key={formKey}
               resume={resume}
@@ -165,7 +211,8 @@ export function Editor() {
               </Button>
             </div>
             <p className={styles.formFooter}>
-              Precisa de outro visual? <Link to="/modelos">Compare os modelos</Link>.
+              <Link to="/curriculos">Ver meus currículos</Link> · Precisa de outro visual?{' '}
+              <Link to="/modelos">Compare os modelos</Link>.
             </p>
           </div>
         </div>

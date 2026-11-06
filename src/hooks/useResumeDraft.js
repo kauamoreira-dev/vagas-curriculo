@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createEmptyEducation, createEmptyExperience, createEmptyResume } from '@/data/resume'
+import { createEmptyEducation, createEmptyExperience, createEmptyResume, resumeTitle } from '@/data/resume'
 import { getTemplate } from '@/data/templates'
 import { resumeStore } from '@/services/resumeStore'
 import { createId } from '@/utils/id'
@@ -7,39 +7,67 @@ import { createId } from '@/utils/id'
 // Espera após a última alteração antes de gravar: evita regravar a foto a cada tecla.
 const SAVE_DELAY = 400
 
-// Abre o currículo mais recente; sem nenhum salvo, um novo (gravado só na primeira alteração).
-function loadDraft() {
+/**
+ * Com `id`, abre aquele currículo (record null = não encontrado). Sem `id`, abre o mais recente;
+ * sem nenhum salvo, um novo, gravado só na primeira alteração. `persisted` indica se já está salvo.
+ */
+function loadRecord(id) {
+  if (id) {
+    const record = resumeStore.getResume(id)
+    return { record, persisted: Boolean(record) }
+  }
   const recent = resumeStore.listResumes()[0]
   const record = recent ? resumeStore.getResume(recent.id) : null
-  return record ?? resumeStore.getUnmigratedLegacy() ?? resumeStore.newRecord()
+  if (record) return { record, persisted: true }
+  return { record: resumeStore.getUnmigratedLegacy() ?? resumeStore.newRecord(), persisted: false }
 }
 
 /**
  * Estado do currículo em edição. É salvo automaticamente no navegador deste dispositivo
  * (localStorage, via `resumeStore`) — não há envio para servidor.
  */
-export function useResumeDraft() {
-  const [draft, setDraft] = useState(loadDraft)
+// Sessão de edição: o currículo pedido, como foi carregado (`loaded`) e como está agora (`record`).
+function openSession(id) {
+  const { record, persisted } = loadRecord(id)
+  return { requestedId: id, loaded: record, record, persisted }
+}
+
+export function useResumeDraft(id) {
+  const [session, setSession] = useState(() => openSession(id))
   const [storageAvailable, setStorageAvailable] = useState(true)
-  const lastSaved = useRef(draft)
   const pending = useRef(null)
 
-  // Grava a versão pendente, se houver. Também chamada ao sair da página e ao desmontar.
+  // Outro currículo pedido pela URL (/editor/:id): troca durante a renderização, sem efeito extra.
+  // /editor → /editor/<id do aberto> não conta como troca.
+  if (id && id !== session.requestedId && id !== session.record?.id) {
+    setSession(openSession(id))
+  }
+
+  const draft = session.record
+
+  // Grava a versão pendente, se houver. Também chamada ao sair da página, ao trocar de currículo e ao desmontar.
   const flush = useCallback(() => {
     const record = pending.current
     if (!record) return
     pending.current = null
     const saved = resumeStore.saveResume(record)
-    lastSaved.current = record
     setStorageAvailable(Boolean(saved))
+    if (saved) {
+      setSession((current) =>
+        current.record?.id === record.id && !current.persisted ? { ...current, persisted: true } : current,
+      )
+    }
   }, [])
 
   useEffect(() => {
-    if (draft === lastSaved.current) return undefined
+    // Trocou de currículo com alteração pendente no anterior: grava antes de seguir.
+    if (pending.current && pending.current.id !== draft?.id) flush()
+    // Abrir (ou reabrir, no StrictMode) um currículo não é alteração: nada a gravar.
+    if (!draft || draft === session.loaded) return undefined
     pending.current = draft
     const timer = setTimeout(flush, SAVE_DELAY)
     return () => clearTimeout(timer)
-  }, [draft, flush])
+  }, [draft, session.loaded, flush])
 
   useEffect(() => {
     const flushWhenHidden = () => document.visibilityState === 'hidden' && flush()
@@ -52,16 +80,32 @@ export function useResumeDraft() {
     }
   }, [flush])
 
-  const updateResume = useCallback((updater) => {
-    setDraft((current) => ({ ...current, resume: updater(current.resume) }))
-  }, [])
-
-  const setTemplateId = useCallback((templateId) => {
-    if (!getTemplate(templateId)) return
-    setDraft((current) =>
-      current.templateId === templateId ? current : { ...current, templateId },
+  // Todas as ações ignoram o caso "não encontrado" (record null).
+  const updateDraft = useCallback((updater) => {
+    setSession((current) =>
+      current.record ? { ...current, record: updater(current.record) } : current,
     )
   }, [])
+
+  const updateResume = useCallback(
+    (updater) => updateDraft((current) => ({ ...current, resume: updater(current.resume) })),
+    [updateDraft],
+  )
+
+  const setTitle = useCallback(
+    (title) => updateDraft((current) => ({ ...current, title })),
+    [updateDraft],
+  )
+
+  const setTemplateId = useCallback(
+    (templateId) => {
+      if (!getTemplate(templateId)) return
+      updateDraft((current) =>
+        current.templateId === templateId ? current : { ...current, templateId },
+      )
+    },
+    [updateDraft],
+  )
 
   const setPersonalField = useCallback(
     (field, value) =>
@@ -83,30 +127,30 @@ export function useResumeDraft() {
   )
 
   const updateItem = useCallback(
-    (section, id, field, value) =>
+    (section, itemId, field, value) =>
       updateResume((resume) => ({
         ...resume,
         [section]: resume[section].map((item) =>
-          item.id === id ? { ...item, [field]: value } : item,
+          item.id === itemId ? { ...item, [field]: value } : item,
         ),
       })),
     [updateResume],
   )
 
   const removeItem = useCallback(
-    (section, id) =>
+    (section, itemId) =>
       updateResume((resume) => ({
         ...resume,
-        [section]: resume[section].filter((item) => item.id !== id),
+        [section]: resume[section].filter((item) => item.id !== itemId),
       })),
     [updateResume],
   )
 
   const moveItem = useCallback(
-    (section, id, direction) =>
+    (section, itemId, direction) =>
       updateResume((resume) => {
         const items = [...resume[section]]
-        const index = items.findIndex((item) => item.id === id)
+        const index = items.findIndex((item) => item.id === itemId)
         const target = index + direction
         if (index < 0 || target < 0 || target >= items.length) return resume
         ;[items[index], items[target]] = [items[target], items[index]]
@@ -115,28 +159,32 @@ export function useResumeDraft() {
     [updateResume],
   )
 
-  const replaceResume = useCallback((resume) => {
-    // Gera novos ids para que o conteúdo copiado seja independente da origem.
-    const withIds = (items) => items.map((item) => ({ ...item, id: createId() }))
-    setDraft((current) => ({
-      ...current,
-      resume: {
+  const replaceResume = useCallback(
+    (resume) => {
+      // Gera novos ids para que o conteúdo copiado seja independente da origem.
+      const withIds = (items) => items.map((item) => ({ ...item, id: createId() }))
+      updateResume(() => ({
         ...resume,
         experience: withIds(resume.experience),
         education: withIds(resume.education),
-      },
-    }))
-  }, [])
+      }))
+    },
+    [updateResume],
+  )
 
   // Esvazia o currículo aberto (ele continua salvo, sem conteúdo).
-  const resetDraft = useCallback(() => {
-    setDraft((current) => ({ ...current, resume: createEmptyResume() }))
-  }, [])
+  const resetDraft = useCallback(() => updateResume(() => createEmptyResume()), [updateResume])
 
   return {
-    templateId: draft.templateId,
-    resume: draft.resume,
+    notFound: !draft,
+    resumeId: draft?.id,
+    persisted: session.persisted,
+    title: draft?.title ?? '',
+    autoTitle: draft ? resumeTitle(draft.resume) : '',
+    templateId: draft?.templateId,
+    resume: draft?.resume,
     storageAvailable,
+    setTitle,
     setTemplateId,
     setPersonalField,
     setField,

@@ -7,6 +7,7 @@ import styles from './Header.module.css'
 const NAV_ITEMS = [
   { to: '/#como-funciona', label: 'Como funciona', hash: true },
   { to: '/modelos', label: 'Modelos' },
+  { to: '/curriculos', label: 'Meus currículos' },
   { to: '/editor', label: 'Editor' },
 ]
 

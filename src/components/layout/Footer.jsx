@@ -26,6 +26,9 @@ export function Footer() {
                 <Link to="/editor">Editor</Link>
               </li>
               <li>
+                <Link to="/curriculos">Meus currículos</Link>
+              </li>
+              <li>
                 <Link to="/#como-funciona">Como funciona</Link>
               </li>
             </ul>
@@ -35,7 +38,7 @@ export function Footer() {
 
       <div className={`container ${styles.legal}`}>
         <p>© {CURRENT_YEAR} Vagas Currículo</p>
-        <p>Seu rascunho fica salvo apenas neste navegador.</p>
+        <p>Seus currículos ficam salvos apenas neste navegador.</p>
       </div>
     </footer>
   )

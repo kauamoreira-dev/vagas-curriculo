@@ -7,7 +7,8 @@ import { listKeys, readJSON, readText, removeKey, writeJSON, writeText } from '@
  * Currículos salvos no navegador (localStorage), formato v2:
  * - INDEX_KEY: { version: 2, legacyHash, items: [{ id, title, templateId, createdAt, updatedAt, hasPhoto }] }
  *   Resumo leve para listar sem carregar fotos.
- * - RESUME_PREFIX + id: { id, templateId, createdAt, updatedAt, resume } — os dados completos.
+ * - RESUME_PREFIX + id: { id, title, templateId, createdAt, updatedAt, resume } — os dados completos.
+ *   `title` é o nome dado pela pessoa; vazio, a lista usa o título gerado a partir de nome e cargo.
  * O currículo é gravado antes do índice; na leitura, os dois são reconciliados.
  */
 export const LEGACY_KEY = 'vagas-curriculo:rascunho:v1'
@@ -28,6 +29,7 @@ function normalizeRecord(raw, fallbackDate) {
   if (!raw || typeof raw !== 'object' || typeof raw.id !== 'string' || !raw.id) return null
   return {
     id: raw.id,
+    title: typeof raw.title === 'string' ? raw.title : '',
     templateId: getTemplate(raw.templateId) ? raw.templateId : DEFAULT_TEMPLATE_ID,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : fallbackDate,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : fallbackDate,
@@ -38,12 +40,17 @@ function normalizeRecord(raw, fallbackDate) {
 function summarize(record) {
   return {
     id: record.id,
-    title: resumeTitle(record.resume),
+    title: displayTitle(record),
     templateId: record.templateId,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
     hasPhoto: Boolean(record.resume.personal.photo),
   }
+}
+
+// Título mostrado na lista: o escolhido pela pessoa ou, se vazio, o gerado.
+export function displayTitle(record) {
+  return record.title?.trim() || resumeTitle(record.resume)
 }
 
 const byMostRecent = (a, b) => (a.updatedAt < b.updatedAt ? 1 : a.updatedAt > b.updatedAt ? -1 : 0)
@@ -96,7 +103,7 @@ export function createResumeStore(storage, { now = () => new Date().toISOString(
   // Novo currículo em memória; só é gravado no primeiro `saveResume`.
   function newRecord({ templateId = DEFAULT_TEMPLATE_ID, resume = createEmptyResume() } = {}) {
     const date = now()
-    return { id: createId(), templateId, createdAt: date, updatedAt: date, resume }
+    return { id: createId(), title: '', templateId, createdAt: date, updatedAt: date, resume }
   }
 
   /** Grava (ou cria) o currículo e atualiza o índice. Retorna o registro salvo ou null se falhar. */
@@ -106,6 +113,20 @@ export function createResumeStore(storage, { now = () => new Date().toISOString(
     const items = listResumes().filter((item) => item.id !== saved.id)
     if (!writeIndex([summarize(saved), ...items])) return null
     return saved
+  }
+
+  /** Remove o currículo e o tira do índice. Retorna false se o índice não pôde ser atualizado. */
+  function deleteResume(id) {
+    removeKey(resumeKey(id), storage)
+    return writeIndex(listResumes().filter((item) => item.id !== id))
+  }
+
+  /** Cria uma cópia independente (novo id, mesmos dados). Retorna a cópia salva ou null. */
+  function duplicateResume(id) {
+    const original = getResume(id)
+    if (!original) return null
+    const copy = newRecord({ templateId: original.templateId, resume: structuredClone(original.resume) })
+    return saveResume({ ...copy, title: `${displayTitle(original)} (cópia)` })
   }
 
   function moveLegacyToBackup(raw) {
@@ -180,7 +201,16 @@ export function createResumeStore(storage, { now = () => new Date().toISOString(
     return { status: index ? 'recovered' : 'migrated', id: record.id }
   }
 
-  return { listResumes, getResume, newRecord, saveResume, migrateLegacyDraft, getUnmigratedLegacy }
+  return {
+    listResumes,
+    getResume,
+    newRecord,
+    saveResume,
+    deleteResume,
+    duplicateResume,
+    migrateLegacyDraft,
+    getUnmigratedLegacy,
+  }
 }
 
 // Instância usada pelo app, ligada ao localStorage do navegador.
