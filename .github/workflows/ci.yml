@@ -14,10 +14,12 @@ concurrency:
 permissions:
   contents: read
 
+# Runner fixo (não ubuntu-latest): troca de versão do Ubuntu só quando decidirmos, já que o
+# Chromium do Playwright depende das bibliotecas do sistema.
 jobs:
   checks:
     name: Lint, testes unitários e build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
@@ -34,7 +36,7 @@ jobs:
 
   e2e:
     name: Testes E2E (Playwright)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
