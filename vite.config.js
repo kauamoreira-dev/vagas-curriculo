@@ -13,4 +13,9 @@ export default defineConfig({
   server: {
     port: 5174,
   },
+  test: {
+    // Testes puros rodam em node; os que precisam de DOM declaram `// @vitest-environment jsdom`.
+    environment: 'node',
+    setupFiles: ['./src/test/setup.js'],
+  },
 })

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { SAMPLE_RESUME, createEmptyResume } from '@/data/resume'
+import { DEFAULT_TEMPLATE_ID } from '@/data/templates'
+import { createMemoryStorage, failWritesTo } from '@/test/memoryStorage'
 import {
   INDEX_KEY,
   LEGACY_BACKUP_KEY,
@@ -7,27 +9,6 @@ import {
   RESUME_PREFIX,
   createResumeStore,
 } from './resumeStore'
-
-// localStorage em memória; `quota` (em caracteres) simula espaço esgotado.
-function createMemoryStorage({ quota = Infinity } = {}) {
-  const data = new Map()
-  const used = () => [...data].reduce((total, [key, value]) => total + key.length + value.length, 0)
-  return {
-    data,
-    get length() {
-      return data.size
-    },
-    key: (index) => [...data.keys()][index] ?? null,
-    getItem: (key) => (data.has(key) ? data.get(key) : null),
-    setItem(key, value) {
-      const previous = data.get(key)
-      const next = used() - (previous ? key.length + previous.length : 0) + key.length + String(value).length
-      if (next > quota) throw new DOMException('Sem espaço', 'QuotaExceededError')
-      data.set(key, String(value))
-    },
-    removeItem: (key) => data.delete(key),
-  }
-}
 
 let clock
 const now = () => new Date(Date.UTC(2026, 10, 6, 12, 0, clock++)).toISOString()
@@ -125,11 +106,7 @@ describe('migrateLegacyDraft', () => {
     const storage = createMemoryStorage()
     storage.setItem(LEGACY_KEY, raw)
     const store = createResumeStore(storage, { now })
-    const original = storage.setItem
-    storage.setItem = (key, value) => {
-      if (key === INDEX_KEY) throw new DOMException('Sem espaço', 'QuotaExceededError')
-      original(key, value)
-    }
+    failWritesTo(storage, (key) => key === INDEX_KEY)
 
     expect(store.migrateLegacyDraft()).toEqual({ status: 'failed' })
     expect(resumeKeys(storage)).toEqual([])
@@ -222,5 +199,181 @@ describe('deleteResume e duplicateResume', () => {
   it('duplicar um id inexistente retorna null', () => {
     const store = createResumeStore(createMemoryStorage(), { now })
     expect(store.duplicateResume('nao-existe')).toBeNull()
+  })
+})
+
+describe('falhas parciais de gravação', () => {
+  it('saveResume retorna null se o índice não couber, mas o currículo fica gravado e volta à lista', () => {
+    const storage = createMemoryStorage()
+    const store = createResumeStore(storage, { now })
+    const existing = store.saveResume({ ...store.newRecord(), resume: SAMPLE_RESUME })
+    failWritesTo(storage, (key) => key === INDEX_KEY)
+
+    const record = { ...store.newRecord({ templateId: 'moderno' }), resume: SAMPLE_RESUME }
+    expect(store.saveResume(record)).toBeNull()
+    // Comportamento atual: o null não significa perda de dados — a reconciliação recupera o órfão.
+    expect(store.getResume(record.id)?.templateId).toBe('moderno')
+    expect(store.listResumes().map((item) => item.id).sort()).toEqual([existing.id, record.id].sort())
+  })
+
+  it('deleteResume retorna false se o índice não puder ser regravado, mas o currículo já foi removido', () => {
+    const storage = createMemoryStorage()
+    const store = createResumeStore(storage, { now })
+    const kept = store.saveResume({ ...store.newRecord(), resume: SAMPLE_RESUME })
+    const removed = store.saveResume(store.newRecord())
+    failWritesTo(storage, (key) => key === INDEX_KEY)
+
+    expect(store.deleteResume(removed.id)).toBe(false)
+    expect(store.getResume(removed.id)).toBeNull()
+    // O índice antigo ainda cita o excluído; a lista o descarta por não achar o currículo.
+    expect(JSON.parse(storage.getItem(INDEX_KEY)).items.map((item) => item.id)).toContain(removed.id)
+    expect(store.listResumes().map((item) => item.id)).toEqual([kept.id])
+  })
+})
+
+describe('dados corrompidos', () => {
+  it.each([
+    ['JSON ilegível', '{quebrado'],
+    ['de outra versão', JSON.stringify({ version: 1, items: [] })],
+    ['sem itens', JSON.stringify({ version: 2 })],
+  ])('com índice %s, reconstrói a lista a partir dos currículos e o próximo save o regrava', (_, raw) => {
+    const storage = createMemoryStorage()
+    const store = createResumeStore(storage, { now })
+    const first = store.saveResume({ ...store.newRecord(), resume: SAMPLE_RESUME })
+    const second = store.saveResume(store.newRecord({ templateId: 'essencial' }))
+    storage.setItem(INDEX_KEY, raw)
+
+    expect(store.listResumes().map((item) => item.id)).toEqual([second.id, first.id])
+
+    const third = store.saveResume(store.newRecord())
+    const index = JSON.parse(storage.getItem(INDEX_KEY))
+    expect(index.version).toBe(2)
+    expect(index.items.map((item) => item.id)).toEqual([third.id, second.id, first.id])
+  })
+
+  it('ignora currículo gravado com JSON ilegível ou sem id', () => {
+    const storage = createMemoryStorage()
+    const store = createResumeStore(storage, { now })
+    const valid = store.saveResume({ ...store.newRecord(), resume: SAMPLE_RESUME })
+    storage.setItem(`${RESUME_PREFIX}ilegivel`, '{quebrado')
+    storage.setItem(`${RESUME_PREFIX}sem-id`, JSON.stringify({ resume: SAMPLE_RESUME }))
+
+    expect(store.getResume('ilegivel')).toBeNull()
+    expect(store.getResume('sem-id')).toBeNull()
+    expect(store.listResumes().map((item) => item.id)).toEqual([valid.id])
+  })
+
+  it('mantém na lista um item do índice cujo currículo ficou ilegível (abrir dá "não encontrado")', () => {
+    const storage = createMemoryStorage()
+    const store = createResumeStore(storage, { now })
+    const saved = store.saveResume({ ...store.newRecord(), resume: SAMPLE_RESUME })
+    storage.setItem(RESUME_PREFIX + saved.id, '{quebrado')
+
+    // Comportamento atual: a lista confia no índice enquanto a chave existir.
+    expect(store.listResumes().map((item) => item.id)).toEqual([saved.id])
+    expect(store.getResume(saved.id)).toBeNull()
+  })
+
+  it('troca modelo desconhecido pelo padrão e completa título, datas e campos ausentes', () => {
+    const storage = createMemoryStorage()
+    const store = createResumeStore(storage, { now })
+    const raw = { id: 'antigo', title: 42, templateId: 'inexistente', resume: { personal: { name: 'Ana' } } }
+    storage.setItem(`${RESUME_PREFIX}antigo`, JSON.stringify(raw))
+
+    const record = store.getResume('antigo')
+    expect(record).toMatchObject({ id: 'antigo', title: '', templateId: DEFAULT_TEMPLATE_ID })
+    expect(record.createdAt).toEqual(expect.any(String))
+    expect(record.updatedAt).toBe(record.createdAt)
+    expect(record.resume.personal).toMatchObject({ name: 'Ana', email: '', photoVisible: true })
+    expect(store.listResumes()[0]).toMatchObject({ id: 'antigo', title: 'Ana', templateId: DEFAULT_TEMPLATE_ID })
+  })
+})
+
+describe('armazenamento indisponível', () => {
+  it('nenhuma operação lança erro: listas vazias e gravações retornam null/false', () => {
+    const store = createResumeStore(createMemoryStorage({ unavailable: true }), { now })
+
+    expect(store.listResumes()).toEqual([])
+    expect(store.getResume('qualquer')).toBeNull()
+    expect(store.saveResume({ ...store.newRecord(), resume: SAMPLE_RESUME })).toBeNull()
+    expect(store.deleteResume('qualquer')).toBe(false)
+    expect(store.duplicateResume('qualquer')).toBeNull()
+    expect(store.migrateLegacyDraft()).toEqual({ status: 'none' })
+    expect(store.getUnmigratedLegacy()).toBeNull()
+  })
+
+  it('newRecord funciona mesmo assim, para o editor abrir um currículo em memória', () => {
+    const store = createResumeStore(createMemoryStorage({ unavailable: true }), { now })
+    expect(store.newRecord()).toMatchObject({ id: expect.any(String), templateId: DEFAULT_TEMPLATE_ID })
+  })
+})
+
+describe('backup do rascunho antigo', () => {
+  it('se o backup não couber, migra mesmo assim e conclui a remoção do antigo numa próxima execução', () => {
+    const storage = createMemoryStorage()
+    const raw = legacyDraft()
+    storage.setItem(LEGACY_KEY, raw)
+    const store = createResumeStore(storage, { now })
+    let backupFails = true
+    failWritesTo(storage, (key) => backupFails && key === LEGACY_BACKUP_KEY)
+
+    const result = store.migrateLegacyDraft()
+    expect(result.status).toBe('migrated')
+    expect(storage.getItem(LEGACY_KEY)).toBe(raw) // sem backup, o original não é apagado
+    expect(storage.getItem(LEGACY_BACKUP_KEY)).toBeNull()
+    expect(store.getUnmigratedLegacy()).toBeNull() // o hash no índice o reconhece como já migrado
+
+    backupFails = false
+    expect(store.migrateLegacyDraft()).toEqual({ status: 'none' })
+    expect(storage.getItem(LEGACY_KEY)).toBeNull()
+    expect(storage.getItem(LEGACY_BACKUP_KEY)).toBe(raw)
+    expect(store.listResumes().map((item) => item.id)).toEqual([result.id])
+  })
+})
+
+describe('getUnmigratedLegacy', () => {
+  it('retorna null sem rascunho antigo, para rascunho vazio e depois da migração', () => {
+    const storage = createMemoryStorage()
+    const store = createResumeStore(storage, { now })
+    expect(store.getUnmigratedLegacy()).toBeNull()
+
+    storage.setItem(LEGACY_KEY, legacyDraft(createEmptyResume()))
+    expect(store.getUnmigratedLegacy()).toBeNull()
+
+    storage.setItem(LEGACY_KEY, legacyDraft())
+    store.migrateLegacyDraft()
+    expect(store.getUnmigratedLegacy()).toBeNull()
+  })
+
+  it('devolve o rascunho como registro em memória, sem gravá-lo', () => {
+    const storage = createMemoryStorage()
+    storage.setItem(LEGACY_KEY, legacyDraft(SAMPLE_RESUME, 'essencial'))
+    const store = createResumeStore(storage, { now })
+
+    const record = store.getUnmigratedLegacy()
+    expect(record).toMatchObject({ title: '', templateId: 'essencial' })
+    expect(record.resume.personal.name).toBe('Marina Albuquerque')
+    expect(resumeKeys(storage)).toEqual([])
+  })
+})
+
+describe('duplicateResume com foto e título próprio', () => {
+  it('copia a foto (e se ela está oculta) e parte do título escolhido pela pessoa', () => {
+    const store = createResumeStore(createMemoryStorage(), { now })
+    const photo = 'data:image/jpeg;base64,AAAA'
+    const original = store.saveResume({
+      ...store.newRecord(),
+      title: 'Vaga no banco',
+      resume: { ...SAMPLE_RESUME, personal: { ...SAMPLE_RESUME.personal, photo, photoVisible: false } },
+    })
+
+    const copy = store.duplicateResume(original.id)
+    expect(copy.title).toBe('Vaga no banco (cópia)')
+    expect(copy.resume.personal).toMatchObject({ photo, photoVisible: false })
+    expect(copy.createdAt).not.toBe(original.createdAt)
+    expect(store.listResumes().map((item) => [item.title, item.hasPhoto])).toEqual([
+      ['Vaga no banco (cópia)', true],
+      ['Vaga no banco', true],
+    ])
   })
 })
