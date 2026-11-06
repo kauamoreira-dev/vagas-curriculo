@@ -85,6 +85,24 @@ textarea.control {
   color: var(--gray-500);
 }
 
+.required {
+  color: var(--danger);
+}
+
+.control[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.control[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 3px rgb(180 35 24 / 0.2);
+}
+
+.error {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--danger);
+}
+
 .item {
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);

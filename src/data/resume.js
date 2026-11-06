@@ -24,7 +24,7 @@ export const SAMPLE_RESUME = {
     name: 'Marina Albuquerque',
     title: 'Analista de Dados',
     email: 'marina.exemplo@email.com',
-    phone: '(00) 00000-0000',
+    phone: '(91) 90000-0000',
     location: 'Belém, PA',
     link: 'linkedin.com/in/exemplo',
   },

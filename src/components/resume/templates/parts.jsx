@@ -9,25 +9,29 @@ import {
 // Blocos de conteúdo compartilhados pelos modelos. Cada modelo define o próprio visual via `styles`.
 
 export function NameBlock({ personal, styles }) {
+  const name = personal.name?.trim()
+  const title = personal.title?.trim()
   return (
     <header className={styles.identity}>
-      <h1 className={personal.name ? styles.name : `${styles.name} ${styles.placeholder}`}>
-        {personal.name || 'Seu nome'}
+      <h1 className={name ? styles.name : `${styles.name} ${styles.placeholder}`}>
+        {name || 'Seu nome'}
       </h1>
-      <p className={personal.title ? styles.title : `${styles.title} ${styles.placeholder}`}>
-        {personal.title || 'Cargo ou área de atuação'}
+      <p className={title ? styles.title : `${styles.title} ${styles.placeholder}`}>
+        {title || 'Cargo ou área de atuação'}
       </p>
     </header>
   )
 }
 
 export function ContactList({ personal, styles }) {
-  const items = [personal.email, personal.phone, personal.location, personal.link].filter(Boolean)
+  const items = [personal.email, personal.phone, personal.location, personal.link]
+    .map((item) => item?.trim())
+    .filter(Boolean)
   if (!items.length) return null
   return (
     <ul className={styles.contact}>
-      {items.map((item) => (
-        <li key={item}>{item}</li>
+      {items.map((item, index) => (
+        <li key={index}>{item}</li>
       ))}
     </ul>
   )
@@ -51,7 +55,9 @@ export function Summary({ summary, styles }) {
   )
 }
 
-function EntryHead({ title, org, period, styles }) {
+function EntryHead({ title: rawTitle, org: rawOrg, period, styles }) {
+  const title = rawTitle?.trim()
+  const org = rawOrg?.trim()
   return (
     <div className={styles.entryHead}>
       <h3 className={styles.entryTitle}>

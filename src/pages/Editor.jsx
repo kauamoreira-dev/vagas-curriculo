@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ResumeForm } from '@/components/editor/ResumeForm'
@@ -10,6 +10,7 @@ import { SAMPLE_RESUME } from '@/data/resume'
 import { TEMPLATES, getTemplate } from '@/data/templates'
 import { useResumeDraft } from '@/hooks/useResumeDraft'
 import { hasEducationContent, hasExperienceContent } from '@/utils/resumeText'
+import { validateResume } from '@/utils/validation'
 import styles from './Editor.module.css'
 
 function hasContent(resume) {
@@ -28,6 +29,11 @@ export function Editor() {
   const { resume, templateId, setTemplateId } = draft
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState('form')
+  const [showAllErrors, setShowAllErrors] = useState(false)
+  // Trocar a chave recria o formulário e zera os campos marcados como visitados.
+  const [formKey, setFormKey] = useState(0)
+  const errors = useMemo(() => validateResume(resume), [resume])
+  const errorCount = Object.keys(errors).length
 
   // O modelo pode chegar pela URL (/editor?modelo=moderno) a partir da página de modelos.
   const requestedTemplate = searchParams.get('modelo')
@@ -51,12 +57,39 @@ export function Editor() {
     if (hasContent(resume) && !window.confirm('Substituir o conteúdo atual pelo exemplo fictício?'))
       return
     draft.replaceResume(SAMPLE_RESUME)
+    restartValidation()
   }
 
   function clearAll() {
     if (!window.confirm('Apagar todo o conteúdo do currículo? Essa ação não pode ser desfeita.'))
       return
     draft.resetDraft()
+    restartValidation()
+  }
+
+  function restartValidation() {
+    setShowAllErrors(false)
+    setFormKey((key) => key + 1)
+  }
+
+  // Pendências não impedem o PDF: a pessoa vê o que revisar e decide se gera mesmo assim.
+  function savePdf() {
+    if (errorCount > 0) {
+      setShowAllErrors(true)
+      const message =
+        errorCount === 1
+          ? 'Há 1 campo para revisar no currículo. Gerar o PDF mesmo assim?'
+          : `Há ${errorCount} campos para revisar no currículo. Gerar o PDF mesmo assim?`
+      if (!window.confirm(message)) {
+        setView('form')
+        // Espera o formulário exibir as mensagens antes de levar a pessoa ao primeiro campo.
+        requestAnimationFrame(() => {
+          document.querySelector('[aria-invalid="true"]')?.focus()
+        })
+        return
+      }
+    }
+    window.print()
   }
 
   const isEmpty = !hasContent(resume)
@@ -92,7 +125,7 @@ export function Editor() {
             <Button variant="danger" size="sm" onClick={clearAll} disabled={isEmpty}>
               Limpar
             </Button>
-            <Button size="sm" onClick={() => window.print()} disabled={isEmpty}>
+            <Button size="sm" onClick={savePdf} disabled={isEmpty}>
               Salvar PDF
             </Button>
           </div>
@@ -128,7 +161,13 @@ export function Editor() {
                 ? 'Rascunho salvo automaticamente neste navegador.'
                 : 'Não foi possível salvar o rascunho neste navegador. Salve em PDF antes de sair.'}
             </p>
-            <ResumeForm resume={resume} actions={draft} />
+            <ResumeForm
+              key={formKey}
+              resume={resume}
+              actions={draft}
+              errors={errors}
+              showAllErrors={showAllErrors}
+            />
             <div className={styles.mobileActions}>
               <Button variant="secondary" size="sm" onClick={fillWithSample}>
                 Usar exemplo

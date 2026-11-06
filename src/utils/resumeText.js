@@ -15,14 +15,19 @@ export function splitSkills(text) {
 }
 
 export function formatPeriod(start, end) {
-  if (start && end) return `${start} – ${end}`
-  return start || end || ''
+  const from = String(start ?? '').trim()
+  const to = String(end ?? '').trim()
+  if (from && to) return `${from} – ${to}`
+  return from || to
 }
 
+// Campos só com espaços não contam como conteúdo.
+const filled = (value) => Boolean(String(value ?? '').trim())
+
 export function hasExperienceContent(item) {
-  return Boolean(item.role || item.company || item.description)
+  return filled(item.role) || filled(item.company) || filled(item.description)
 }
 
 export function hasEducationContent(item) {
-  return Boolean(item.course || item.institution)
+  return filled(item.course) || filled(item.institution)
 }
