@@ -25,6 +25,8 @@ Acesse http://localhost:5174
 | `npm run build`   | Build de produção em `dist/`               |
 | `npm run preview` | Serve o build de produção localmente       |
 | `npm run lint`    | Analisa o código com Oxlint                |
+| `npm test`        | Roda os testes uma vez (Vitest)            |
+| `npm run test:watch` | Roda os testes a cada alteração         |
 
 ## Estrutura
 
@@ -39,7 +41,7 @@ src/
   data/               catálogo de modelos, currículo vazio e exemplo fictício
   hooks/              useResumeDraft (rascunho local), useElementWidth
   pages/              Home, Templates (/modelos), Editor (/editor), NotFound
-  utils/              funções auxiliares (texto, ids, localStorage)
+  utils/              funções auxiliares (texto, ids, localStorage, validação) e seus testes (*.test.js)
   index.css           tokens de design (cores, tipografia, espaços) e estilos globais
 ```
 
