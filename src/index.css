@@ -36,8 +36,26 @@
   --radius-sm: 6px;
   --radius: 10px;
   --radius-lg: 16px;
-  --shadow-sheet: 0 1px 2px rgb(16 24 40 / 0.06), 0 12px 32px -8px rgb(11 36 112 / 0.18);
-  --ring: 0 0 0 3px rgb(31 91 224 / 0.35);
+
+  /* Elevação: sombras suaves e difusas, em camadas (contato + difusa), levemente azuladas */
+  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 4px 16px -4px rgb(16 24 40 / 0.08);
+  --shadow-card-hover: 0 2px 4px rgb(16 24 40 / 0.04), 0 14px 32px -10px rgb(11 36 112 / 0.18);
+  --shadow-sheet:
+    0 1px 2px rgb(16 24 40 / 0.05), 0 8px 24px -6px rgb(11 36 112 / 0.12),
+    0 28px 56px -18px rgb(11 36 112 / 0.16);
+
+  /* Vidro: cabeçalhos fixos translúcidos sobre o conteúdo que rola por baixo */
+  --glass-bg: rgb(255 255 255 / 0.85);
+  --glass-blur: saturate(1.4) blur(8px);
+
+  /* Foco: halo suave na cor da marca (#0040cd a 15%) */
+  --ring: 0 0 0 3px rgb(0 64 205 / 0.15);
+  /*
+   * Para botões, links e abas: o halo sozinho tem contraste ~1,2:1 e some no botão azul.
+   * Um traço fino da marca, afastado por um respiro branco, mantém o foco visível (≥ 3:1).
+   */
+  --ring-strong: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--blue-700), 0 0 0 6.5px rgb(0 64 205 / 0.15);
 
   font-family: var(--font-body);
   font-size: 16px;
@@ -100,8 +118,9 @@ select {
   color: inherit;
 }
 
+/* Padrão para o que não define o próprio foco (links de texto, caixas de seleção, controle deslizante) */
 :focus-visible {
-  outline: 2px solid var(--blue-600);
+  outline: 2px solid var(--blue-700);
   outline-offset: 2px;
 }
 

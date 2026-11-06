@@ -232,6 +232,7 @@
 .modelThumb {
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-xs);
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease;

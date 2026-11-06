@@ -38,7 +38,20 @@
   background: var(--paper);
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 }
+
+/* Só em quem tem mouse: no toque o "hover" fica preso depois de tocar */
+@media (hover: hover) {
+  .card:hover {
+    border-color: var(--gray-300);
+    box-shadow: var(--shadow-card-hover);
+  }
+}
+
 
 .thumb {
   border-bottom: 1px solid var(--gray-200);

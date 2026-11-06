@@ -18,7 +18,7 @@
 
 .button:focus-visible {
   outline: none;
-  box-shadow: var(--ring);
+  box-shadow: var(--ring-strong);
 }
 
 .button:disabled {

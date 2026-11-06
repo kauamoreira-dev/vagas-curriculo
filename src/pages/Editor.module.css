@@ -14,6 +14,16 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* Sem suporte a desfoque, o fundo fica quase opaco para o texto de baixo não atrapalhar */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .chrome {
+    background: rgb(255 255 255 / 0.97);
+  }
 }
 
 .topbar {
@@ -25,7 +35,6 @@
   align-items: center;
   gap: 12px 16px;
   padding: 12px var(--gutter);
-  background: var(--paper);
   border-bottom: 1px solid var(--gray-200);
 }
 
@@ -89,6 +98,15 @@
   box-shadow: 0 1px 2px rgb(16 24 40 / 0.12);
 }
 
+/* Depois da opção marcada: o foco precisa vencer a sombra dela */
+.templateOption:focus-visible,
+.viewTab:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: none;
+  box-shadow: var(--ring-strong);
+}
+
 .actions {
   grid-area: actions;
   display: flex;
@@ -104,7 +122,6 @@
 .viewTabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  background: var(--paper);
   border-bottom: 1px solid var(--gray-200);
 }
 

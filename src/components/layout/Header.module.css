@@ -2,9 +2,17 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgb(255 255 255 / 0.92);
-  backdrop-filter: saturate(1.4) blur(10px);
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border-bottom: 1px solid var(--gray-200);
+}
+
+/* Sem suporte a desfoque, o fundo fica quase opaco para o texto de baixo não atrapalhar */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .header {
+    background: rgb(255 255 255 / 0.97);
+  }
 }
 
 .bar {
@@ -26,6 +34,11 @@
   font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
+}
+
+.menuButton:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-strong);
 }
 
 .menuIcon {

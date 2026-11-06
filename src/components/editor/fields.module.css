@@ -76,9 +76,10 @@ textarea.control {
   border-color: #98a2b3;
 }
 
-.control:focus {
+.control:focus,
+.control:focus-visible {
   outline: none;
-  border-color: var(--blue-600);
+  border-color: var(--blue-700);
   box-shadow: var(--ring);
 }
 
@@ -96,7 +97,7 @@ textarea.control {
 }
 
 .control[aria-invalid='true']:focus {
-  box-shadow: 0 0 0 3px rgb(180 35 24 / 0.2);
+  box-shadow: 0 0 0 3px rgb(180 35 24 / 0.15);
 }
 
 .error {
@@ -109,6 +110,7 @@ textarea.control {
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
   background: var(--paper);
+  box-shadow: var(--shadow-xs);
 }
 
 .itemHead {
@@ -151,6 +153,11 @@ textarea.control {
 .iconButton:hover:not(:disabled) {
   background: var(--paper);
   border-color: var(--gray-300);
+}
+
+.iconButton:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-strong);
 }
 
 .iconButton:disabled {
