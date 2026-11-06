@@ -162,6 +162,15 @@ describe('navegador de aplicativo', () => {
   })
 })
 
+describe('título da aba', () => {
+  it('usa o nome do site e o restaura ao sair do editor', () => {
+    const { unmount } = renderEditor(`/editor/${seed().id}`)
+    expect(document.title).toBe('Editor · Currículo Tapajós')
+    unmount()
+    expect(document.title).toBe('Currículo Tapajós')
+  })
+})
+
 describe('área de impressão', () => {
   it('fica no body, fora do app, com o currículo no modelo escolhido', () => {
     const { container } = renderEditor(`/editor/${seed(SAMPLE_RESUME, 'moderno').id}`)

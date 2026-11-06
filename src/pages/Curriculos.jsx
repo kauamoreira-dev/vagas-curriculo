@@ -21,9 +21,9 @@ export function Curriculos() {
   const [status, setStatus] = useState({ text: '', error: false })
 
   useEffect(() => {
-    document.title = 'Meus currículos · Vagas Currículo'
+    document.title = 'Meus currículos · Currículo Tapajós'
     return () => {
-      document.title = 'Vagas Currículo'
+      document.title = 'Currículo Tapajós'
     }
   }, [])
 

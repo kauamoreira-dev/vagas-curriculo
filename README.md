@@ -1,6 +1,6 @@
-# Vagas Currículo
+# Currículo Tapajós
 
-Projeto independente (React + Vite + JavaScript) para o desenvolvimento do Vagas Currículo.
+Projeto independente (React + Vite + JavaScript) para o desenvolvimento do Currículo Tapajós.
 Não compartilha código nem dependências com o Vagas Tapajós.
 
 ## Requisitos

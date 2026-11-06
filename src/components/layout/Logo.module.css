@@ -35,6 +35,13 @@
   line-height: 1;
 }
 
+/* Celulares estreitos (ex.: 320px): o nome encolhe para não encostar nos botões ao lado */
+@media (max-width: 359.98px) {
+  .name {
+    font-size: 0.95rem;
+  }
+}
+
 .primary {
   font-family: var(--font-body);
   font-weight: 700;

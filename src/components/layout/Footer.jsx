@@ -37,7 +37,7 @@ export function Footer() {
       </div>
 
       <div className={`container ${styles.legal}`}>
-        <p>© {CURRENT_YEAR} Vagas Currículo</p>
+        <p>© {CURRENT_YEAR} Currículo Tapajós</p>
         <p>Seus currículos ficam salvos apenas neste navegador.</p>
       </div>
     </footer>

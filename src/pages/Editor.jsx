@@ -71,9 +71,9 @@ function EditorWorkspace({ draft }) {
   }, [requestedTemplate, setTemplateId])
 
   useEffect(() => {
-    document.title = 'Editor · Vagas Currículo'
+    document.title = 'Editor · Currículo Tapajós'
     return () => {
-      document.title = 'Vagas Currículo'
+      document.title = 'Currículo Tapajós'
     }
   }, [])
 
