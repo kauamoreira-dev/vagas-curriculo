@@ -36,6 +36,8 @@ export const SAMPLE_RESUME = {
     phone: '(91) 90000-0000',
     location: 'Belém, PA',
     link: 'linkedin.com/in/exemplo',
+    photo: '',
+    photoVisible: true,
   },
   summary:
     'Analista com quatro anos de experiência em indicadores comerciais e logísticos. Organizo bases, construo painéis e traduzo números em decisões para equipes não técnicas.',

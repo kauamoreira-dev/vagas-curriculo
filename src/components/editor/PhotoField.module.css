@@ -1,0 +1,147 @@
+.field {
+  display: grid;
+  gap: 10px;
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.current {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.preview {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  overflow: hidden;
+  border: 1px solid var(--gray-300);
+  border-radius: 50%;
+  background: var(--gray-50);
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+}
+
+.preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Foto oculta no currículo: continua visível aqui, mas esmaecida */
+.preview[data-hidden='true'] img {
+  opacity: 0.4;
+}
+
+.controls {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.remove {
+  color: var(--danger);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+  cursor: pointer;
+}
+
+.toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--blue-600);
+}
+
+.hint {
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+}
+
+.error {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--danger);
+}
+
+.cropper {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  background: var(--gray-50);
+}
+
+.viewport {
+  position: relative;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--gray-200);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.viewport:active {
+  cursor: grabbing;
+}
+
+.viewport:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.viewport img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: none;
+  transform-origin: top left;
+  pointer-events: none;
+}
+
+/* Guia circular: mostra como a foto tende a aparecer nos modelos */
+.viewport::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 999px rgb(16 24 40 / 0.35);
+  pointer-events: none;
+}
+
+.zoom {
+  display: grid;
+  gap: 4px;
+  width: 240px;
+  max-width: 100%;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.zoom input {
+  width: 100%;
+  accent-color: var(--blue-600);
+}

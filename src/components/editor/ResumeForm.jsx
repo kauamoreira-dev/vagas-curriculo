@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { formatPhone } from '@/utils/validation'
 import { FieldRow, FormSection, RepeatableItem, TextField } from './fields'
+import { PhotoField } from './PhotoField'
 
 /**
  * Formulário do currículo. Recebe o estado e as ações de `useResumeDraft`.
@@ -29,6 +30,12 @@ export function ResumeForm({ resume, actions, errors = {}, showAllErrors = false
         title="Dados pessoais"
         description="Campos com * são obrigatórios. Informe ao menos um contato."
       >
+        <PhotoField
+          photo={personal.photo}
+          visible={personal.photoVisible !== false}
+          onPhotoChange={(value) => setPersonalField('photo', value)}
+          onVisibleChange={(value) => setPersonalField('photoVisible', value)}
+        />
         <TextField
           label="Nome completo"
           required

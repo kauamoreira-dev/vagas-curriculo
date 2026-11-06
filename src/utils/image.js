@@ -20,10 +20,21 @@ export function validatePhotoFile(file) {
   return null
 }
 
-// Maior quadrado possível, centralizado na imagem.
-export function getCenteredSquare(width, height) {
-  const size = Math.min(width, height)
-  return { x: (width - size) / 2, y: (height - size) / 2, size }
+export const PHOTO_MAX_ZOOM = 3
+
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+
+/**
+ * Recorte quadrado a partir do zoom (1 = maior quadrado possível) e do ponto central desejado,
+ * em pixels da imagem original. O quadrado é mantido sempre dentro da imagem.
+ */
+export function computeCrop(width, height, { zoom = 1, centerX = width / 2, centerY = height / 2 } = {}) {
+  const size = Math.min(width, height) / clamp(zoom, 1, PHOTO_MAX_ZOOM)
+  return {
+    x: clamp(centerX - size / 2, 0, width - size),
+    y: clamp(centerY - size / 2, 0, height - size),
+    size,
+  }
 }
 
 function readAsDataURL(file) {
@@ -58,7 +69,7 @@ export async function preparePhoto(file, { crop } = {}) {
   const { naturalWidth: width, naturalHeight: height } = image
   if (!width || !height) throw new PhotoError('A imagem está vazia ou corrompida.')
 
-  const area = crop ?? getCenteredSquare(width, height)
+  const area = crop ?? computeCrop(width, height)
   const output = Math.round(Math.min(PHOTO_SIZE, area.size))
   const canvas = document.createElement('canvas')
   canvas.width = output
