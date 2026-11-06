@@ -12,6 +12,8 @@
   font-family: var(--font-body);
   font-size: 13px;
   line-height: 1.55;
+  /* E-mails, links e palavras longas quebram em vez de vazar da folha */
+  overflow-wrap: anywhere;
 }
 
 .photo {
@@ -66,7 +68,6 @@
   list-style: none;
   font-size: 12px;
   border-top: 1px solid rgb(255 255 255 / 0.18);
-  overflow-wrap: anywhere;
 }
 
 .section + .section {

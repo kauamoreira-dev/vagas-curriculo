@@ -38,6 +38,13 @@
   font-size: var(--text-sm);
 }
 
+/* Em telas de toque, o botão pequeno mantém o visual mas ganha a altura mínima recomendada */
+@media (pointer: coarse) {
+  .sm {
+    height: 44px;
+  }
+}
+
 .primary {
   background: var(--blue-700);
   color: #fff;

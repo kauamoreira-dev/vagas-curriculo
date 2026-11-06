@@ -8,6 +8,7 @@ import { Editor } from './Editor'
 
 let confirm
 let print
+let scrollTo
 
 function seed(resume = SAMPLE_RESUME, templateId = 'classico') {
   return resumeStore.saveResume({ ...resumeStore.newRecord({ templateId }), resume })
@@ -36,7 +37,13 @@ beforeEach(() => {
   localStorage.clear()
   confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
   print = vi.spyOn(window, 'print').mockImplementation(() => {})
+  scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 })
+
+// O jsdom não rola: simula a posição atual da página.
+function scrolledTo(y) {
+  vi.spyOn(window, 'scrollY', 'get').mockReturnValue(y)
+}
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -80,6 +87,40 @@ describe('Salvar PDF', () => {
     expect(print).not.toHaveBeenCalled()
     expect(screen.getByRole('tab', { name: 'Editar' })).toHaveAttribute('aria-selected', 'true')
     await waitFor(() => expect(screen.getByLabelText('E-mail')).toHaveFocus())
+  })
+})
+
+describe('abas Editar e Visualizar', () => {
+  it('cada aba volta para a posição em que a pessoa a deixou', () => {
+    openSeeded()
+    const tab = (name) => screen.getByRole('tab', { name })
+
+    scrolledTo(900) // fundo do formulário
+    fireEvent.click(tab('Visualizar'))
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 0) // a folha começa do topo
+
+    scrolledTo(300)
+    fireEvent.click(tab('Editar'))
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 900)
+
+    fireEvent.click(tab('Visualizar'))
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 300)
+  })
+
+  it('tocar na aba já aberta não mexe na rolagem', () => {
+    openSeeded()
+    scrollTo.mockClear()
+    scrolledTo(500)
+    fireEvent.click(screen.getByRole('tab', { name: 'Editar' }))
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('marca a aba ativa no contêiner, para o CSS esconder o modelo na aba Editar', () => {
+    const { container } = renderEditor(`/editor/${seed().id}`)
+    const app = container.querySelector('[data-view]')
+    expect(app).toHaveAttribute('data-view', 'form')
+    fireEvent.click(screen.getByRole('tab', { name: 'Visualizar' }))
+    expect(app).toHaveAttribute('data-view', 'preview')
   })
 })
 

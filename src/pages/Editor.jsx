@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ResumeForm } from '@/components/editor/ResumeForm'
@@ -52,6 +52,8 @@ function EditorWorkspace({ draft }) {
   const { resume, templateId, setTemplateId } = draft
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState('form')
+  // No celular as duas abas rolam a mesma página: cada uma volta para onde a pessoa estava.
+  const scrollByView = useRef({ form: 0, preview: 0 })
   const [showAllErrors, setShowAllErrors] = useState(false)
   // Trocar a chave recria o formulário e zera os campos marcados como visitados.
   const [formKey, setFormKey] = useState(0)
@@ -70,6 +72,16 @@ function EditorWorkspace({ draft }) {
       document.title = 'Vagas Currículo'
     }
   }, [])
+
+  function showView(next) {
+    if (next === view) return
+    scrollByView.current[view] = window.scrollY
+    setView(next)
+  }
+
+  useLayoutEffect(() => {
+    window.scrollTo(0, scrollByView.current[view])
+  }, [view])
 
   function chooseTemplate(id) {
     setTemplateId(id)
@@ -104,7 +116,7 @@ function EditorWorkspace({ draft }) {
           ? 'Há 1 campo para revisar no currículo. Gerar o PDF mesmo assim?'
           : `Há ${errorCount} campos para revisar no currículo. Gerar o PDF mesmo assim?`
       if (!window.confirm(message)) {
-        setView('form')
+        showView('form')
         // Espera o formulário exibir as mensagens antes de levar a pessoa ao primeiro campo.
         requestAnimationFrame(() => {
           document.querySelector('[aria-invalid="true"]')?.focus()
@@ -118,7 +130,7 @@ function EditorWorkspace({ draft }) {
   const isEmpty = !hasResumeContent(resume)
 
   return (
-    <div className={styles.app}>
+    <div className={styles.app} data-view={view}>
       <div className={styles.chrome}>
         <header className={styles.topbar}>
           <div className={styles.brand}>
@@ -162,7 +174,7 @@ function EditorWorkspace({ draft }) {
             role="tab"
             aria-selected={view === 'form'}
             className={styles.viewTab}
-            onClick={() => setView('form')}
+            onClick={() => showView('form')}
           >
             Editar
           </button>
@@ -171,7 +183,7 @@ function EditorWorkspace({ draft }) {
             role="tab"
             aria-selected={view === 'preview'}
             className={styles.viewTab}
-            onClick={() => setView('preview')}
+            onClick={() => showView('preview')}
           >
             Visualizar
           </button>

@@ -8,6 +8,8 @@
   font-family: var(--font-body);
   font-size: 13px;
   line-height: 1.55;
+  /* E-mails, links e palavras longas quebram em vez de vazar da folha */
+  overflow-wrap: anywhere;
 }
 
 .identity {

@@ -1,7 +1,11 @@
 .app {
+  /* Altura do cabeçalho fixo na aba Editar: os campos focados param logo abaixo dele */
+  --editor-sticky: 132px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  /* dvh desconta a barra de endereço do celular; 100vh fica para navegadores antigos */
+  min-height: 100dvh;
   background: var(--gray-50);
 }
 
@@ -70,6 +74,12 @@
 
 .templateOption:hover {
   color: var(--ink);
+}
+
+@media (pointer: coarse) {
+  .templateOption {
+    height: 44px;
+  }
 }
 
 .templateOption[aria-checked='true'] {
@@ -214,6 +224,20 @@
   text-align: center;
 }
 
+/*
+ * Celular e tablet: na aba Editar o modelo fica escondido, para que o cabeçalho fixo ocupe menos
+ * espaço com o teclado aberto. Ele aparece na aba Visualizar, onde se vê o resultado da escolha.
+ */
+@media (max-width: 1023.98px) {
+  .app[data-view='form'] .topbar {
+    grid-template-areas: 'brand actions';
+  }
+
+  .app[data-view='form'] .templatePicker {
+    display: none;
+  }
+}
+
 @media (min-width: 640px) {
   .actions > :not(:last-child) {
     display: inline-flex;
@@ -231,7 +255,10 @@
 /* ---------- Desktop: formulário e folha lado a lado ---------- */
 @media (min-width: 1024px) {
   .app {
+    /* Os painéis rolam por dentro; o cabeçalho não cobre os campos */
+    --editor-sticky: 0px;
     height: 100vh;
+    height: 100dvh;
     overflow: hidden;
   }
 
