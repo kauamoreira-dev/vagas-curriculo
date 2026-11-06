@@ -19,7 +19,10 @@ test('a logo continua sendo o arquivo oficial e carrega', async ({ page }) => {
   await page.goto('/')
   const image = page.locator('img[src="/brand/logo-vagas-curriculo.png"]').first()
   await expect(image).toBeAttached()
-  expect(await image.evaluate((element) => element.complete && element.naturalWidth > 0)).toBe(true)
+  // Espera o download terminar: instantâneo localmente, mas o PNG oficial tem ~950 KB pela internet.
+  await expect
+    .poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0), { timeout: 20_000 })
+    .toBe(true)
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/brand/logo-vagas-curriculo.png')
 })
 
