@@ -10,7 +10,16 @@ export function createEmptyEducation() {
 
 export function createEmptyResume() {
   return {
-    personal: { name: '', title: '', email: '', phone: '', location: '', link: '' },
+    personal: {
+      name: '',
+      title: '',
+      email: '',
+      phone: '',
+      location: '',
+      link: '',
+      photo: '', // data URL (JPEG em base64) gerada por `preparePhoto`
+      photoVisible: true,
+    },
     summary: '',
     experience: [createEmptyExperience()],
     education: [createEmptyEducation()],

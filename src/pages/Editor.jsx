@@ -16,7 +16,8 @@ import styles from './Editor.module.css'
 function hasContent(resume) {
   const { personal } = resume
   return Boolean(
-    Object.values(personal).some((value) => value.trim()) ||
+    // Só campos de texto contam (ex.: `photoVisible` é booleano).
+    Object.values(personal).some((value) => typeof value === 'string' && value.trim()) ||
     resume.summary.trim() ||
     resume.skills.trim() ||
     resume.experience.some(hasExperienceContent) ||
