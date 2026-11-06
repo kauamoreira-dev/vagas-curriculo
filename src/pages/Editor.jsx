@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { SAMPLE_RESUME, hasResumeContent } from '@/data/resume'
 import { TEMPLATES, getTemplate } from '@/data/templates'
 import { useResumeDraft } from '@/hooks/useResumeDraft'
+import { isInAppBrowser } from '@/utils/browser'
 import { validateResume } from '@/utils/validation'
 import styles from './Editor.module.css'
 
@@ -54,6 +55,9 @@ function EditorWorkspace({ draft }) {
   const [view, setView] = useState('form')
   // No celular as duas abas rolam a mesma página: cada uma volta para onde a pessoa estava.
   const scrollByView = useRef({ form: 0, preview: 0 })
+  // Reduzida, a folha cabe na tela mas o texto fica ilegível no celular; em tamanho real, rola de lado.
+  const [actualSize, setActualSize] = useState(false)
+  const [inAppBrowser] = useState(() => isInAppBrowser(navigator.userAgent))
   const [showAllErrors, setShowAllErrors] = useState(false)
   // Trocar a chave recria o formulário e zera os campos marcados como visitados.
   const [formKey, setFormKey] = useState(0)
@@ -193,6 +197,13 @@ function EditorWorkspace({ draft }) {
       <div className={styles.workspace}>
         <div className={styles.formPane} data-active={view === 'form'}>
           <div className={styles.formInner}>
+            {inAppBrowser ? (
+              <p className={styles.inAppNotice} role="note">
+                <strong>Abra no Chrome ou no Safari.</strong> No navegador deste aplicativo, o PDF pode
+                não ser gerado e o currículo fica salvo só aqui. Use o menu (⋯ ou ⋮) e escolha “Abrir no
+                navegador” antes de começar.
+              </p>
+            ) : null}
             <p className={styles.saveStatus} data-warning={!draft.storageAvailable}>
               {draft.storageAvailable
                 ? 'Rascunho salvo automaticamente neste navegador.'
@@ -231,9 +242,21 @@ function EditorWorkspace({ draft }) {
 
         <div className={styles.previewPane} data-active={view === 'preview'}>
           <div className={styles.previewInner}>
-            <ScaledSheet className={styles.sheet}>
-              <ResumeDocument templateId={templateId} resume={resume} />
-            </ScaledSheet>
+            <div className={styles.previewToolbar}>
+              <Button
+                variant="secondary"
+                size="sm"
+                aria-pressed={actualSize}
+                onClick={() => setActualSize((current) => !current)}
+              >
+                {actualSize ? 'Ajustar à tela' : 'Ver em tamanho real'}
+              </Button>
+            </div>
+            <div className={styles.sheetScroller} data-actual-size={actualSize}>
+              <ScaledSheet className={styles.sheet} actualSize={actualSize}>
+                <ResumeDocument templateId={templateId} resume={resume} />
+              </ScaledSheet>
+            </div>
             <p className={styles.previewNote}>
               Pré-visualização em A4. Se o conteúdo passar de uma página, o PDF terá mais de uma.
             </p>

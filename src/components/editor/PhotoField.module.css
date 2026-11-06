@@ -90,6 +90,8 @@
   border: 1px solid var(--gray-200);
   border-radius: var(--radius);
   background: var(--gray-50);
+  /* Ao rolar até o recorte, não para sob o cabeçalho fixo do editor */
+  scroll-margin-top: calc(var(--editor-sticky, 0px) + 16px);
 }
 
 .viewport {
@@ -131,17 +133,55 @@
   pointer-events: none;
 }
 
+/* Largura igual à da área de recorte (definida no componente) */
 .zoom {
   display: grid;
   gap: 4px;
-  width: 240px;
   max-width: 100%;
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--gray-700);
 }
 
-.zoom input {
-  width: 100%;
+.zoomControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoomControls input {
+  flex: 1;
+  min-width: 0;
   accent-color: var(--blue-600);
+}
+
+/* − e +: alternativa ao controle deslizante, que é pequeno para o dedo */
+.zoomButton {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.zoomButton:hover:not(:disabled) {
+  border-color: var(--blue-700);
+  color: var(--blue-700);
+}
+
+.zoomButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+@media (pointer: coarse) {
+  .zoomButton {
+    width: 44px;
+    height: 44px;
+  }
 }

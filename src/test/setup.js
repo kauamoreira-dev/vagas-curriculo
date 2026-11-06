@@ -10,6 +10,11 @@ if (typeof window !== 'undefined' && !window.ResizeObserver) {
   }
 }
 
+// Também não rola elementos até a vista.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {}
+}
+
 // Sem `globals`, a Testing Library não desmonta sozinha entre testes. Só há o que limpar no jsdom.
 afterEach(async () => {
   if (typeof document === 'undefined') return

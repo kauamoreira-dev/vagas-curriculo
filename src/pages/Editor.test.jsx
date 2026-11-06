@@ -124,6 +124,44 @@ describe('abas Editar e Visualizar', () => {
   })
 })
 
+describe('pré-visualização em tamanho real', () => {
+  it('alterna entre ajustada à tela e tamanho real, com rolagem lateral só na folha', () => {
+    const { container } = renderEditor(`/editor/${seed().id}`)
+    const toggle = screen.getByRole('button', { name: 'Ver em tamanho real' })
+    const scroller = container.querySelector('[data-actual-size]')
+    const sheet = () => scroller.querySelector('[style*="scale"]')
+
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    expect(scroller).toHaveAttribute('data-actual-size', 'false')
+
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    expect(toggle).toHaveTextContent('Ajustar à tela')
+    expect(scroller).toHaveAttribute('data-actual-size', 'true')
+    expect(sheet()).toHaveStyle({ transform: 'scale(1)', visibility: 'visible' })
+    expect(sheet().parentElement).toHaveStyle({ width: '794px' })
+
+    fireEvent.click(toggle)
+    expect(screen.getByRole('button', { name: 'Ver em tamanho real' })).toHaveAttribute('aria-pressed', 'false')
+  })
+})
+
+describe('navegador de aplicativo', () => {
+  const instagram =
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 337.0.3.23.54'
+
+  it('avisa para abrir no Chrome ou no Safari', () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(instagram)
+    openSeeded()
+    expect(screen.getByRole('note')).toHaveTextContent('Abra no Chrome ou no Safari')
+  })
+
+  it('não mostra o aviso em navegador comum', () => {
+    openSeeded()
+    expect(screen.queryByRole('note')).toBeNull()
+  })
+})
+
 describe('área de impressão', () => {
   it('fica no body, fora do app, com o currículo no modelo escolhido', () => {
     const { container } = renderEditor(`/editor/${seed(SAMPLE_RESUME, 'moderno').id}`)

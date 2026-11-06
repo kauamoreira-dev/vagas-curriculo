@@ -7,8 +7,9 @@ import styles from './ScaledSheet.module.css'
  * Exibe uma folha A4 em escala para caber na largura disponível.
  * `clip` fixa a altura em uma página (true) ou numa fração dela (ex.: 0.7);
  * sem ele, a moldura acompanha a altura do conteúdo.
+ * `actualSize` mostra a folha sem reduzir (largura A4); quem chama cuida da rolagem horizontal.
  */
-export function ScaledSheet({ children, clip = false, className = '' }) {
+export function ScaledSheet({ children, clip = false, actualSize = false, className = '' }) {
   const frameRef = useRef(null)
   const sheetRef = useRef(null)
   const width = useElementWidth(frameRef)
@@ -22,20 +23,25 @@ export function ScaledSheet({ children, clip = false, className = '' }) {
     return () => observer.disconnect()
   }, [clip])
 
-  const scale = width / PAGE_WIDTH
+  const scale = actualSize ? 1 : width / PAGE_WIDTH
   const clipRatio = clip === true ? 1 : clip
   const height =
     (clipRatio ? PAGE_HEIGHT * clipRatio : Math.max(contentHeight, PAGE_HEIGHT)) * scale
 
   return (
-    <div ref={frameRef} className={`${styles.frame} ${className}`} style={{ height }}>
+    <div
+      ref={frameRef}
+      className={`${styles.frame} ${className}`}
+      style={{ height, ...(actualSize && { width: PAGE_WIDTH, minWidth: PAGE_WIDTH }) }}
+    >
       <div
         ref={sheetRef}
         className={styles.sheet}
         style={{
           width: PAGE_WIDTH,
           transform: `scale(${scale})`,
-          visibility: width ? 'visible' : 'hidden',
+          // Antes da primeira medição a escala seria 0; em tamanho real não há o que esperar.
+          visibility: actualSize || width ? 'visible' : 'hidden',
         }}
       >
         {children}

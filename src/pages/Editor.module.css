@@ -160,6 +160,22 @@
   color: var(--danger);
 }
 
+.inAppNotice {
+  margin-bottom: 8px;
+  padding: 12px;
+  border: 1px solid #f5c26b;
+  border-radius: var(--radius-sm);
+  background: #fff8e6;
+  font-size: var(--text-sm);
+  color: #6b4500;
+}
+
+.inAppNotice strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #4d3200;
+}
+
 .mobileActions {
   display: flex;
   gap: 8px;
@@ -210,10 +226,30 @@
   padding: 24px var(--gutter) 48px;
 }
 
+.previewToolbar {
+  display: flex;
+  justify-content: flex-end;
+  max-width: 794px;
+  margin: 0 auto 12px;
+}
+
+/* Em tamanho real a folha (794px) passa da tela: a rolagem lateral fica só aqui, não na página */
+.sheetScroller[data-actual-size='true'] {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  /* Encosta nas bordas da tela para aproveitar a largura toda no celular */
+  margin-inline: calc(-1 * var(--gutter));
+  padding: 0 var(--gutter) 12px;
+}
+
 .sheet {
   max-width: 794px;
   margin-inline: auto;
   box-shadow: var(--shadow-sheet);
+}
+
+.sheetScroller[data-actual-size='true'] .sheet {
+  max-width: none;
 }
 
 .previewNote {
