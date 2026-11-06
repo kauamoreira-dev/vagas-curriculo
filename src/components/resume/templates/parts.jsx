@@ -23,6 +23,21 @@ export function NameBlock({ personal, styles }) {
   )
 }
 
+// Foto de perfil; não aparece sem foto ou quando a pessoa escolheu ocultá-la.
+export function Photo({ personal, styles }) {
+  if (!personal.photo || personal.photoVisible === false) return null
+  const name = personal.name?.trim()
+  return (
+    <img
+      className={styles.photo}
+      src={personal.photo}
+      alt={name ? `Foto de ${name}` : 'Foto de perfil'}
+      width={400}
+      height={400}
+    />
+  )
+}
+
 export function ContactList({ personal, styles }) {
   const items = [personal.email, personal.phone, personal.location, personal.link]
     .map((item) => item?.trim())

@@ -23,6 +23,21 @@
   gap: 2px;
 }
 
+/* Com foto, nome e contato ficam à esquerda e a foto à direita */
+.top:has(.photo) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 28px;
+}
+
+.photo {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+}
+
 .name {
   font-size: 34px;
   font-weight: 700;

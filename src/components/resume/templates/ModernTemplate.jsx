@@ -1,10 +1,19 @@
-import { ContactList, EducationList, ExperienceList, NameBlock, SkillsList, Summary } from './parts'
+import {
+  ContactList,
+  EducationList,
+  ExperienceList,
+  NameBlock,
+  Photo,
+  SkillsList,
+  Summary,
+} from './parts'
 import styles from './ModernTemplate.module.css'
 
 export function ModernTemplate({ resume }) {
   return (
     <div className={styles.page}>
       <aside className={styles.aside}>
+        <Photo personal={resume.personal} styles={styles} />
         <NameBlock personal={resume.personal} styles={styles} />
         <ContactList personal={resume.personal} styles={styles} />
         <SkillsList skills={resume.skills} styles={styles} />

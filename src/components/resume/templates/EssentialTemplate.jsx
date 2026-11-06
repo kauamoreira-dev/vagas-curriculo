@@ -1,4 +1,12 @@
-import { ContactList, EducationList, ExperienceList, NameBlock, SkillsList, Summary } from './parts'
+import {
+  ContactList,
+  EducationList,
+  ExperienceList,
+  NameBlock,
+  Photo,
+  SkillsList,
+  Summary,
+} from './parts'
 import styles from './EssentialTemplate.module.css'
 
 export function EssentialTemplate({ resume }) {
@@ -7,6 +15,7 @@ export function EssentialTemplate({ resume }) {
       <div className={styles.top}>
         <NameBlock personal={resume.personal} styles={styles} />
         <ContactList personal={resume.personal} styles={styles} />
+        <Photo personal={resume.personal} styles={styles} />
       </div>
       <Summary summary={resume.summary} styles={styles} />
       <ExperienceList experience={resume.experience} styles={styles} />
