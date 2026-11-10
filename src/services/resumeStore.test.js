@@ -7,6 +7,7 @@ import {
   LEGACY_BACKUP_KEY,
   LEGACY_KEY,
   RESUME_PREFIX,
+  createResumePath,
   createResumeStore,
 } from './resumeStore'
 
@@ -375,5 +376,14 @@ describe('duplicateResume com foto e título próprio', () => {
       ['Vaga no banco (cópia)', true],
       ['Vaga no banco', true],
     ])
+  })
+})
+
+describe('createResumePath', () => {
+  it('sem currículos salvos vai direto ao editor; com algum, para a lista', () => {
+    const store = createResumeStore(createMemoryStorage(), { now })
+    expect(createResumePath(store)).toBe('/editor')
+    store.saveResume({ ...store.newRecord(), resume: SAMPLE_RESUME })
+    expect(createResumePath(store)).toBe('/curriculos')
   })
 })

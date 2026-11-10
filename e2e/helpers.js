@@ -25,7 +25,7 @@ export async function expectSaved(page, check) {
 /** Cria um currículo pela lista e espera o editor abrir. Retorna o id da URL. */
 export async function createResume(page) {
   await page.goto('/curriculos')
-  await page.getByRole('button', { name: 'Novo currículo' }).click()
+  await page.getByRole('button', { name: /^(Novo currículo|Criar meu primeiro currículo)$/ }).click()
   await page.waitForURL(/\/editor\/[^/?]+/)
   return new URL(page.url()).pathname.split('/').pop()
 }

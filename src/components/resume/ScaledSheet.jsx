@@ -27,12 +27,19 @@ export function ScaledSheet({ children, clip = false, actualSize = false, classN
   const clipRatio = clip === true ? 1 : clip
   const height =
     (clipRatio ? PAGE_HEIGHT * clipRatio : Math.max(contentHeight, PAGE_HEIGHT)) * scale
+  /*
+   * Com recorte, a altura é só a proporção da folha: o CSS a reserva desde o primeiro quadro.
+   * Sem recorte, até a largura ser medida, reserva uma página; depois acompanha o conteúdo.
+   * Sem isso a moldura nascia com altura 0 e empurrava o que vem abaixo (layout shift).
+   */
+  const reserveRatio = Boolean(clipRatio) || (!width && !actualSize)
+  const sizeStyle = reserveRatio ? { aspectRatio: `${PAGE_WIDTH} / ${PAGE_HEIGHT * (clipRatio || 1)}` } : { height }
 
   return (
     <div
       ref={frameRef}
       className={`${styles.frame} ${className}`}
-      style={{ height, ...(actualSize && { width: PAGE_WIDTH, minWidth: PAGE_WIDTH }) }}
+      style={{ ...sizeStyle, ...(actualSize && { width: PAGE_WIDTH, minWidth: PAGE_WIDTH }) }}
     >
       <div
         ref={sheetRef}

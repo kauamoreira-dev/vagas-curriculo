@@ -215,3 +215,11 @@ export function createResumeStore(storage, { now = () => new Date().toISOString(
 
 // Instância usada pelo app, ligada ao localStorage do navegador.
 export const resumeStore = createResumeStore()
+
+/**
+ * Destino dos botões "Criar currículo": sem nenhum currículo salvo, o editor (abre um novo, gravado
+ * só na primeira edição); com currículos, a lista, para escolher um ou criar outro.
+ */
+export function createResumePath(store = resumeStore) {
+  return store.listResumes().length ? '/curriculos' : '/editor'
+}

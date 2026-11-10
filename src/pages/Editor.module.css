@@ -158,7 +158,8 @@
   background: transparent;
   font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--gray-500);
+  /* cinza-700 sobre o fundo cinza-100: contraste ~9:1 (o cinza-500 dava 4,28:1) */
+  color: var(--gray-700);
   cursor: pointer;
 }
 

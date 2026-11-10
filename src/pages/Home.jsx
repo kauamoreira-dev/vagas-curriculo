@@ -4,6 +4,7 @@ import { ScaledSheet } from '@/components/resume/ScaledSheet'
 import { Button } from '@/components/ui/Button'
 import { SAMPLE_RESUME } from '@/data/resume'
 import { TEMPLATES } from '@/data/templates'
+import { createResumePath } from '@/services/resumeStore'
 import styles from './Home.module.css'
 
 // Anotações de revisão sobre a folha de exemplo. `top` é a posição (% da área visível da folha) do trecho comentado.
@@ -62,7 +63,7 @@ export function Home() {
               modelos, sem cadastro.
             </p>
             <div className={styles.actions}>
-              <Button to="/curriculos">Criar meu currículo</Button>
+              <Button to={createResumePath()}>Criar meu currículo</Button>
               <Button to="/modelos" variant="secondary">
                 Ver modelos
               </Button>

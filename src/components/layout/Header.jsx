@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { createResumePath } from '@/services/resumeStore'
 import { Logo } from './Logo'
 import styles from './Header.module.css'
 
@@ -54,7 +55,7 @@ export function Header() {
               </li>
             ))}
           </ul>
-          <Button to="/curriculos" size="sm" className={styles.cta} onClick={close}>
+          <Button to={createResumePath()} size="sm" className={styles.cta} onClick={close}>
             Criar currículo
           </Button>
         </nav>

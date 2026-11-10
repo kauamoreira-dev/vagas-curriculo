@@ -63,9 +63,12 @@ export function Curriculos() {
             Ficam salvos só neste navegador. Para levar a outro dispositivo, gere o PDF.
           </p>
         </div>
-        <Button onClick={create} className={styles.newButton}>
-          Novo currículo
-        </Button>
+        {/* Com a lista vazia, o cartão abaixo já oferece criar: o botão não se repete aqui */}
+        {items.length ? (
+          <Button onClick={create} className={styles.newButton}>
+            Novo currículo
+          </Button>
+        ) : null}
       </header>
 
       <div className="container">
