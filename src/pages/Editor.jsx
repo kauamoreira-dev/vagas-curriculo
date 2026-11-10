@@ -7,7 +7,7 @@ import { TextField } from '@/components/editor/fields'
 import { Logo } from '@/components/layout/Logo'
 import { ResumeDocument } from '@/components/resume/ResumeDocument'
 import { ScaledSheet } from '@/components/resume/ScaledSheet'
-import { contentLeft, estimatePages, formatPageEstimate, measureContentHeight } from '@/components/resume/pageEstimate'
+import { contentLeft, estimatePages, formatPageEstimate, measureLayout } from '@/components/resume/pageEstimate'
 import { Button } from '@/components/ui/Button'
 import { SAMPLE_RESUME, hasResumeContent } from '@/data/resume'
 import { TEMPLATES, getTemplate } from '@/data/templates'
@@ -224,8 +224,8 @@ function EditorWorkspace({ draft }) {
   useEffect(() => {
     const done = new AbortController()
     const measure = () => {
-      const height = measureContentHeight(documentRef.current)
-      if (!done.signal.aborted && height !== null) setPageEstimate(estimatePages(height))
+      const layout = measureLayout(documentRef.current)
+      if (!done.signal.aborted && layout) setPageEstimate(estimatePages(layout.height, layout.largestBlock))
     }
     const frame = requestAnimationFrame(measure)
     document.fonts?.ready.then(() => requestAnimationFrame(measure))

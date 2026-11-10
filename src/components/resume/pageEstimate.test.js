@@ -29,6 +29,14 @@ describe('estimatePages', () => {
     expect(estimatePages(at(1.01))).toEqual({ min: 2, max: 2 })
   })
 
+  it('blocos que não se partem: se o pior caso (um vão por quebra) passa de página, vira faixa', () => {
+    // 2,7 páginas de conteúdo: sem blocos grandes, 3; com blocos de ~0,3 página, pode chegar a 4.
+    expect(estimatePages(at(2.7), 60)).toEqual({ min: 3, max: 3 })
+    expect(estimatePages(at(2.7), 0.3 * PRINTABLE_HEIGHT)).toEqual({ min: 3, max: 4 })
+    // O mínimo nunca muda: é o conteúdo sem nenhum vão.
+    expect(estimatePages(at(1.5), PRINTABLE_HEIGHT).min).toBe(2)
+  })
+
   it('conteúdo vazio ou inválido conta como 1 página', () => {
     expect(estimatePages(0)).toEqual({ min: 1, max: 1 })
     expect(estimatePages(Number.NaN)).toEqual({ min: 1, max: 1 })
@@ -36,9 +44,10 @@ describe('estimatePages', () => {
 })
 
 describe('formatPageEstimate', () => {
-  it('singular, plural e faixa', () => {
+  it('singular, plural e faixas', () => {
     expect(formatPageEstimate({ min: 1, max: 1 })).toBe('Estimativa: 1 página')
     expect(formatPageEstimate({ min: 2, max: 2 })).toBe('Estimativa: 2 páginas')
     expect(formatPageEstimate({ min: 1, max: 2 })).toBe('Estimativa: 1 ou 2 páginas')
+    expect(formatPageEstimate({ min: 3, max: 5 })).toBe('Estimativa: de 3 a 5 páginas')
   })
 })

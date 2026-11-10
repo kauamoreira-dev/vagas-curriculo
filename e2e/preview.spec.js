@@ -16,11 +16,18 @@ const job = (n, bullets) => ({
   description: Array.from({ length: bullets }, (_, i) => `Resultado ${i + 1}: organizei processos da área.`).join('\n'),
 })
 
-// Currículos de tamanhos diferentes: curto, longo por um parágrafo e longo por experiências.
+// Tópico longo (2 linhas): experiências de 6 tópicos viram blocos grandes que não se partem.
+const LONG_LINE = 'Coordenei a reestruturação completa dos processos de atendimento e dos indicadores da área comercial.'
+const bigJob = (n) => ({ ...job(n, 6), description: Array.from({ length: 6 }, () => LONG_LINE).join('\n') })
+
+// Currículos de tamanhos diferentes: curto, longo por um parágrafo, longo por experiências e o
+// pior caso para a estimativa (blocos grandes perto do fim das páginas, que deixam vãos).
 const RESUMES = {
   curto: { experience: [job(0, 3)] },
   'resumo longo': { experience: [job(0, 3)], summary: 'Frase de teste para o resumo. '.repeat(160) },
   'muitas experiências': { experience: Array.from({ length: 12 }, (_, n) => job(n, 6)) },
+  'blocos grandes (6)': { experience: Array.from({ length: 6 }, (_, n) => bigJob(n)), education: [] },
+  'blocos grandes (9)': { experience: Array.from({ length: 9 }, (_, n) => bigJob(n)), education: [] },
 }
 
 async function openResume(page, templateId, extra) {
@@ -53,7 +60,7 @@ test.describe('estimativa de páginas', () => {
         await openResume(page, templateId, extra)
         const estimate = page.getByText(/^Estimativa: /)
         await expect(estimate).toBeVisible()
-        const [, min, max] = (await estimate.textContent()).match(/(\d+)(?: ou (\d+))? página/)
+        const [, min, max] = (await estimate.textContent()).match(/(\d+)(?: (?:ou|a) (\d+))? página/)
         const real = pdfPages(await page.pdf({ preferCSSPageSize: true, printBackground: true })).length
         expect(real).toBeGreaterThanOrEqual(Number(min))
         expect(real).toBeLessThanOrEqual(Number(max ?? min))
