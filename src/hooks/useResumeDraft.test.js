@@ -315,13 +315,99 @@ describe('ações (B10)', () => {
     expect(order()).toEqual(['exemplo-exp-2', 'exemplo-exp-1'])
   })
 
-  it('replaceResume copia o conteúdo com ids novos', () => {
+  it('replaceResume copia o conteúdo com ids novos em todas as listas', () => {
     const { result } = renderDraft()
     act(() => result.current.replaceResume(SAMPLE_RESUME))
-    const { experience, education, personal } = result.current.resume
+    const { experience, education, certifications, courses, languages, personal } = result.current.resume
     expect(personal.name).toBe('Marina Albuquerque')
     expect(experience.map((item) => item.role)).toEqual(SAMPLE_RESUME.experience.map((item) => item.role))
-    for (const item of [...experience, ...education]) expect(item.id).not.toMatch(/^exemplo-/)
+    expect(courses.map((item) => item.name)).toEqual(SAMPLE_RESUME.courses.map((item) => item.name))
+    for (const item of [...experience, ...education, ...certifications, ...courses, ...languages]) {
+      expect(item.id).not.toMatch(/^exemplo-/)
+    }
+  })
+
+  it.each(['certifications', 'courses', 'languages', 'projects'])(
+    'addItem, updateItem, moveItem e removeItem funcionam em %s e são gravados',
+    (section) => {
+      const { result, record } = openSaved()
+      const before = result.current.resume[section].length
+      act(() => result.current.addItem(section))
+      act(() => result.current.addItem(section))
+      const [first, second] = result.current.resume[section].slice(before)
+      const field = Object.keys(first).find((key) => key !== 'id')
+
+      act(() => result.current.updateItem(section, second.id, field, 'Segundo'))
+      act(() => result.current.moveItem(section, second.id, -1))
+      wait()
+      const saved = resumeStore.getResume(record.id).resume[section].slice(before)
+      expect(saved.map((item) => item.id)).toEqual([second.id, first.id])
+      expect(saved[0][field]).toBe('Segundo')
+
+      act(() => result.current.removeItem(section, second.id))
+      wait()
+      expect(resumeStore.getResume(record.id).resume[section].slice(before).map((item) => item.id)).toEqual([
+        first.id,
+      ])
+    },
+  )
+
+  it('addItem ignora seção desconhecida', () => {
+    const { result } = openSaved()
+    const before = result.current.resume
+    act(() => result.current.addItem('inexistente'))
+    expect(result.current.resume).toBe(before)
+  })
+
+  it('addSkills separa por vírgula, ignora vazios; removeSkill tira só a posição pedida', () => {
+    const { result, record } = openSaved()
+    act(() => result.current.addSkills('softSkills', ' Empatia, , Liderança '))
+    act(() => result.current.addSkills('softSkills', '   '))
+    act(() => result.current.addSkills('skills', 'SQL'))
+    expect(result.current.resume.softSkills).toEqual([...SAMPLE_RESUME.softSkills, 'Empatia', 'Liderança'])
+
+    act(() => result.current.removeSkill('skills', 0))
+    wait()
+    const saved = resumeStore.getResume(record.id).resume
+    expect(saved.skills).toEqual([...SAMPLE_RESUME.skills.slice(1), 'SQL'])
+    expect(saved.softSkills).toEqual([...SAMPLE_RESUME.softSkills, 'Empatia', 'Liderança'])
+  })
+
+  it('abre um currículo salvo no formato antigo sem perder dados e só o reescreve ao editar', () => {
+    const old = {
+      id: 'antigo',
+      title: '',
+      templateId: 'essencial',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      resume: {
+        personal: { name: 'Ana', email: 'ana@email.com', location: 'Santarém, PA', photo: '', photoVisible: true },
+        summary: 'Resumo antigo',
+        experience: [{ id: 'e1', role: 'Analista', company: 'Empresa', start: '2020', end: 'Atual', description: '' }],
+        education: [],
+        skills: 'Excel, Atendimento',
+      },
+    }
+    const raw = JSON.stringify(old)
+    localStorage.setItem(`${RESUME_PREFIX}antigo`, raw)
+    setItem.mockClear()
+
+    const { result } = renderDraft('antigo')
+    expect(result.current.resume.personal).toMatchObject({ name: 'Ana', city: 'Santarém', state: 'PA' })
+    expect(result.current.resume.skills).toEqual(['Excel', 'Atendimento'])
+    expect(result.current.resume.experience).toEqual(old.resume.experience)
+    wait(5000)
+    expect(localStorage.getItem(`${RESUME_PREFIX}antigo`)).toBe(raw)
+
+    act(() => result.current.setField('objective', 'Novo objetivo'))
+    wait()
+    const saved = JSON.parse(localStorage.getItem(`${RESUME_PREFIX}antigo`))
+    expect(saved.resume).toMatchObject({
+      objective: 'Novo objetivo',
+      summary: 'Resumo antigo',
+      skills: ['Excel', 'Atendimento'],
+      personal: { name: 'Ana', city: 'Santarém', state: 'PA' },
+    })
   })
 
   it('resetDraft esvazia o conteúdo mas mantém o mesmo currículo e o título', () => {

@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatPhone,
+  formatZip,
   normalizeLine,
   normalizeMultiline,
   parseResumeDate,
   validateEmail,
   validatePeriod,
+  validateCertificationDates,
+  validateHours,
   validatePhone,
   validateResume,
+  validateUrl,
+  validateYear,
+  validateZip,
 } from './validation'
 
 // Data fixa para que os testes de "futuro" não dependam do dia em que rodam (nov/2026).
@@ -198,5 +204,121 @@ describe('normalização de espaços', () => {
 
   it('normalizeMultiline limpa cada linha e limita linhas vazias seguidas', () => {
     expect(normalizeMultiline('  linha 1  \n\n\n\n  linha  2 \n')).toBe('linha 1\n\nlinha 2')
+  })
+})
+
+describe('CEP', () => {
+  it('formata enquanto a pessoa digita e limita a 8 dígitos', () => {
+    expect(formatZip('66')).toBe('66')
+    expect(formatZip('66010')).toBe('66010')
+    expect(formatZip('660100')).toBe('66010-0')
+    expect(formatZip('66010000999')).toBe('66010-000')
+    expect(formatZip('66.010-000')).toBe('66010-000')
+  })
+
+  it('aceita vazio ou 8 dígitos', () => {
+    expect(validateZip('')).toBeNull()
+    expect(validateZip('66010-000')).toBeNull()
+    expect(validateZip('66010')).toMatch(/8 dígitos/)
+  })
+})
+
+describe('validateUrl', () => {
+  it.each(['', 'github.com/ana', 'https://www.credly.com/badges/abc?x=1', 'http://site.com.br'])('aceita %j', (url) => {
+    expect(validateUrl(url)).toBeNull()
+  })
+
+  it.each(['github', 'ana@email.com', 'https://', 'site .com'])('rejeita %j', (url) => {
+    expect(validateUrl(url)).toMatch(/Link inválido/)
+  })
+})
+
+describe('validateHours e validateYear', () => {
+  it('carga horária: só o número, com "h" opcional', () => {
+    expect(validateHours('')).toBeNull()
+    expect(validateHours('40')).toBeNull()
+    expect(validateHours('40h')).toBeNull()
+    expect(validateHours('120 horas')).toBeNull()
+    expect(validateHours('0')).toMatch(/número de horas/)
+    expect(validateHours('quarenta')).toMatch(/número de horas/)
+  })
+
+  it('ano com 4 dígitos, de 1950 até 10 anos à frente', () => {
+    expect(validateYear('', { today })).toBeNull()
+    expect(validateYear('2022', { today })).toBeNull()
+    expect(validateYear('2027', { today })).toBeNull()
+    expect(validateYear('22', { today })).toMatch(/4 dígitos/)
+    expect(validateYear('1900', { today })).toMatch(/Confira/)
+    expect(validateYear('2040', { today })).toMatch(/Confira/)
+  })
+})
+
+describe('validateCertificationDates', () => {
+  it('aceita datas vazias, validade futura e granularidades diferentes', () => {
+    expect(validateCertificationDates('', '', { today })).toEqual({})
+    expect(validateCertificationDates('jun/2024', 'jun/2027', { today })).toEqual({})
+    expect(validateCertificationDates('2024', '', { today })).toEqual({})
+  })
+
+  it('rejeita emissão futura, validade anterior à emissão e formatos inválidos', () => {
+    expect(validateCertificationDates('2030', '', { today }).issued).toMatch(/futuro/)
+    expect(validateCertificationDates('jun/2024', 'jan/2024', { today }).expires).toMatch(/anterior à emissão/)
+    expect(validateCertificationDates('ontem', 'Atual', { today })).toEqual({
+      issued: expect.stringMatching(/não reconhecido/),
+      expires: expect.stringMatching(/validade/),
+    })
+  })
+})
+
+describe('validateResume — seções novas e endereço', () => {
+  function validResume(overrides = {}) {
+    return {
+      personal: { name: 'Ana', email: 'ana@email.com', phone: '', zip: '' },
+      experience: [],
+      education: [],
+      certifications: [],
+      courses: [],
+      languages: [],
+      projects: [],
+      ...overrides,
+    }
+  }
+
+  it('seções novas vazias, itens vazios e endereço em branco não geram pendência', () => {
+    const resume = validResume({
+      certifications: [{ id: 'c1', name: '', issuer: '', issued: '', expires: '', url: '' }],
+      courses: [{ id: 'k1', name: '', institution: '', hours: '', year: '' }],
+      languages: [{ id: 'l1', language: '', level: '' }],
+      projects: [{ id: 'p1', name: '', description: ' ', technologies: '', url: '' }],
+    })
+    expect(validateResume(resume, { today })).toEqual({})
+  })
+
+  it('aceita currículo antigo, sem as listas novas', () => {
+    const { certifications, courses, languages, projects, ...old } = validResume()
+    expect([certifications, courses, languages, projects].every(Array.isArray)).toBe(true)
+    expect(validateResume(old, { today })).toEqual({})
+  })
+
+  it('aponta cada campo inválido das seções novas pela chave do item', () => {
+    const resume = validResume({
+      personal: { name: 'Ana', email: 'ana@email.com', zip: '660' },
+      certifications: [{ id: 'c1', name: '', issuer: 'AWS', issued: '2030', expires: '', url: 'aws' }],
+      courses: [{ id: 'k1', name: '', institution: 'Senac', hours: 'muitas', year: '22' }],
+      languages: [{ id: 'l1', language: '', level: 'Básico' }],
+      projects: [{ id: 'p1', name: '', description: 'App', technologies: '', url: 'meu app' }],
+    })
+    expect(Object.keys(validateResume(resume, { today })).sort()).toEqual([
+      'certifications.c1.issued',
+      'certifications.c1.name',
+      'certifications.c1.url',
+      'courses.k1.hours',
+      'courses.k1.name',
+      'courses.k1.year',
+      'languages.l1.language',
+      'personal.zip',
+      'projects.p1.name',
+      'projects.p1.url',
+    ])
   })
 })

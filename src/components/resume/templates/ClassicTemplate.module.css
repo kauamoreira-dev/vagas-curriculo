@@ -64,6 +64,17 @@
   color: #9aa3b1;
 }
 
+/* Endereço completo em linha própria, abaixo dos demais contatos, sem separador solto */
+.contact .fullAddress {
+  order: 1;
+  flex-basis: 100%;
+  text-align: center;
+}
+
+.contact .fullAddress::before {
+  content: none;
+}
+
 .section {
   padding-top: 22px;
 }
@@ -148,11 +159,72 @@
   color: #9aa3b1;
 }
 
-/* Impressão: margens verticais vêm do @page; blocos não se partem entre páginas */
+.entryMeta {
+  font-size: 12px;
+  color: #5a6475;
+}
+
+.entryLink {
+  justify-self: start;
+  font-size: 12px;
+  color: #0b2470;
+  text-decoration: none;
+}
+
+.skillGroup {
+  display: grid;
+  gap: 2px;
+}
+
+.groupTitle {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #4a5568;
+}
+
+.languages {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #2d3748;
+}
+
+.languages li + li::before {
+  content: '·';
+  margin: 0 8px;
+  color: #9aa3b1;
+}
+
+.languageName {
+  font-weight: 600;
+}
+
+.languageLevel::before {
+  content: ' – ';
+  color: #9aa3b1;
+}
+
+/*
+ * Impressão: a margem vertical de 14mm é o padding da folha, repetido em cada página
+ * (box-decoration-break: clone). O @page fica sem margem — ver index.css.
+ * Blocos não se partem entre páginas.
+ */
 @media print {
   .page {
     min-height: 0;
-    padding-block: 0;
+    padding-block: 14mm;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+
+  /* Sem suporte (Safari), a margem volta para o @page */
+  @supports not (box-decoration-break: clone) {
+    .page {
+      padding-block: 0;
+    }
   }
 
   .identity,

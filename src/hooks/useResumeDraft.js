@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createEmptyEducation, createEmptyExperience, createEmptyResume, resumeTitle } from '@/data/resume'
+import { ITEM_FACTORIES, LIST_SECTIONS, createEmptyResume, normalizeSkillList, resumeTitle } from '@/data/resume'
 import { getTemplate } from '@/data/templates'
 import { resumeStore } from '@/services/resumeStore'
 import { createId } from '@/utils/id'
@@ -120,7 +120,8 @@ export function useResumeDraft(id) {
 
   const addItem = useCallback(
     (section) => {
-      const factory = section === 'experience' ? createEmptyExperience : createEmptyEducation
+      const factory = ITEM_FACTORIES[section]
+      if (!factory) return
       updateResume((resume) => ({ ...resume, [section]: [...resume[section], factory()] }))
     },
     [updateResume],
@@ -159,14 +160,29 @@ export function useResumeDraft(id) {
     [updateResume],
   )
 
+  // Habilidades (`skills` ou `softSkills`): texto colado com vírgulas vira vários itens.
+  const addSkills = useCallback(
+    (list, value) => {
+      const added = normalizeSkillList(value)
+      if (!added.length) return
+      updateResume((resume) => ({ ...resume, [list]: [...resume[list], ...added] }))
+    },
+    [updateResume],
+  )
+
+  const removeSkill = useCallback(
+    (list, index) =>
+      updateResume((resume) => ({ ...resume, [list]: resume[list].filter((_, position) => position !== index) })),
+    [updateResume],
+  )
+
   const replaceResume = useCallback(
     (resume) => {
       // Gera novos ids para que o conteúdo copiado seja independente da origem.
       const withIds = (items) => items.map((item) => ({ ...item, id: createId() }))
       updateResume(() => ({
         ...resume,
-        experience: withIds(resume.experience),
-        education: withIds(resume.education),
+        ...Object.fromEntries(LIST_SECTIONS.map((section) => [section, withIds(resume[section])])),
       }))
     },
     [updateResume],
@@ -192,6 +208,8 @@ export function useResumeDraft(id) {
     updateItem,
     removeItem,
     moveItem,
+    addSkills,
+    removeSkill,
     replaceResume,
     resetDraft,
   }

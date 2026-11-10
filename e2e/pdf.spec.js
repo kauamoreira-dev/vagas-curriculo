@@ -10,6 +10,28 @@ import { createResume, fillWithSample, pdfImageDraws, pdfImages, pdfPages, uploa
 const BLUE_COLUMN = /\.0431 \.1412 \.4392 rg[\s\S]{0,60}?0 0 250 ([\d.]+) re/g
 const blueColumnHeights = (content) => [...content.matchAll(BLUE_COLUMN)].map(([, height]) => Number(height))
 
+/*
+ * Preenchimentos de outra cor pintados por cima da faixa azul (depois dela, sobre x < 250):
+ * escondem a coluna mesmo com o retângulo azul presente no PDF.
+ */
+function fillsOverBlueColumn(content) {
+  const start = content.search(BLUE_COLUMN_START)
+  if (start < 0) return []
+  let color = BLUE // a varredura começa na própria faixa azul
+  const covering = []
+  for (const line of content.slice(start).split('\n')) {
+    const fill = line.match(/([\d.]+ [\d.]+ [\d.]+) rg$/)
+    if (fill) color = fill[1]
+    const rect = line.match(/^([-\d.]+) [-\d.]+ ([\d.]+) ([\d.]+) re$/)
+    if (rect && color !== BLUE && Number(rect[1]) < 250 && Number(rect[2]) >= 250 && Number(rect[3]) > 100) {
+      covering.push({ color, line })
+    }
+  }
+  return covering
+}
+const BLUE = '.0431 .1412 .4392'
+const BLUE_COLUMN_START = /0 0 250 1\d{3}(\.\d+)? re/
+
 // A4 a 96 dpi tem 1122,5 px de altura; a área útil, sem as margens de 14 mm do @page, ~1017 px.
 const FULL_PAGE = 1100
 
@@ -19,8 +41,23 @@ const LONG_SUMMARY = Array.from(
   (_, index) => `Frase ${index + 1} de um resumo bem longo, para o currículo passar de uma página.`,
 ).join(' ')
 
-async function printPdf(page) {
-  return pdfPages(await page.pdf({ preferCSSPageSize: true, printBackground: true }))
+async function printPdf(page, options = {}) {
+  return pdfPages(await page.pdf({ preferCSSPageSize: true, printBackground: true, ...options }))
+}
+
+// 14 mm a 96 dpi: margem vertical da folha, em cada página.
+const MARGIN = (14 / 25.4) * 96
+const PAGE_HEIGHT = (297 / 25.4) * 96
+
+/*
+ * Linhas de base do texto de cada página, em px a partir do topo da folha. O Chromium posiciona
+ * cada página com uma translação (3.125 = 300/96 dpi) e cada trecho de texto com `Tm`.
+ */
+function textBaselines(content) {
+  // A primeira translação (fundo) não tem deslocamento; a do conteúdo desce até o topo da página.
+  const offsets = [...content.matchAll(/3\.125 0 0 3\.125 [-\d.]+ (-?[\d.]+) cm/g)].map(([, y]) => Number(y))
+  const top = -Math.min(0, ...offsets) / 3.125
+  return [...content.matchAll(/1 0 0 -1 [-\d.]+ ([-\d.]+) Tm/g)].map(([, y]) => Number(y) - top)
 }
 
 test.beforeEach(async ({ page, isMobile }) => {
@@ -44,6 +81,36 @@ for (const template of TEMPLATES) {
       expect((await printPdf(page)).length).toBeGreaterThanOrEqual(2)
     })
 
+    test('sem cabeçalho e rodapé do navegador (URL, data, nº de página), mesmo com a opção ligada', async ({
+      page,
+    }) => {
+      await page.getByRole('textbox', { name: 'Resumo profissional' }).fill(LONG_SUMMARY)
+      const plain = await printPdf(page)
+      // Com displayHeaderFooter, o Chromium desenha data, título, URL e "1/2" na margem da página.
+      const withHeaderFooter = await printPdf(page, { displayHeaderFooter: true })
+      expect(withHeaderFooter).toHaveLength(plain.length)
+      for (const [index, content] of withHeaderFooter.entries()) {
+        expect(content, `página ${index + 1}`).toBe(plain[index])
+      }
+    })
+
+    test('margem de 14 mm no topo e no pé de todas as páginas, em A4', async ({ page }) => {
+      await page.getByRole('textbox', { name: 'Resumo profissional' }).fill(LONG_SUMMARY)
+      const buffer = await page.pdf({ preferCSSPageSize: true, printBackground: true })
+      // A4 em pontos: 595,3 × 841,9 (o Chromium arredonda para px inteiros)
+      const [, width, height] = buffer.toString('latin1').match(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/)
+      expect(Number(width)).toBeCloseTo(595.3, 0)
+      expect(Number(height)).toBeCloseTo(841.9, 0)
+      const pages = pdfPages(buffer)
+      expect(pages.length).toBeGreaterThanOrEqual(2)
+      for (const [index, content] of pages.entries()) {
+        const baselines = textBaselines(content)
+        expect(baselines.length, `página ${index + 1}`).toBeGreaterThan(0)
+        expect(Math.min(...baselines), `topo da página ${index + 1}`).toBeGreaterThan(MARGIN)
+        expect(Math.max(...baselines), `pé da página ${index + 1}`).toBeLessThan(PAGE_HEIGHT - MARGIN)
+      }
+    })
+
     if (template === 'Moderno') {
       test('a coluna azul ocupa a altura toda de cada página', async ({ page }) => {
         await page.getByRole('textbox', { name: 'Resumo profissional' }).fill(LONG_SUMMARY)
@@ -52,6 +119,7 @@ for (const template of TEMPLATES) {
           expect(Math.max(0, ...blueColumnHeights(content)), `página ${index + 1}`).toBeGreaterThanOrEqual(
             FULL_PAGE,
           )
+          expect(fillsOverBlueColumn(content), `nada cobre a coluna na página ${index + 1}`).toEqual([])
         }
       })
     } else {

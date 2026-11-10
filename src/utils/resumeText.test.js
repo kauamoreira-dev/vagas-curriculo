@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatAddress,
+  formatCityState,
   formatPeriod,
   hasEducationContent,
   hasExperienceContent,
@@ -87,5 +89,38 @@ describe('hasEducationContent', () => {
   it('não conta item só com datas ou só com espaços', () => {
     expect(hasEducationContent({ ...empty, start: '2016', end: '2020' })).toBe(false)
     expect(hasEducationContent({ ...empty, course: '  ' })).toBe(false)
+  })
+})
+
+describe('endereço', () => {
+  const full = {
+    street: 'Rua das Flores',
+    number: '120',
+    complement: 'apto 3',
+    district: 'Centro',
+    city: 'Belém',
+    state: 'PA',
+    zip: '66010-000',
+  }
+
+  it('cidade/UF com o que estiver preenchido', () => {
+    expect(formatCityState({ city: 'Belém', state: 'PA' })).toBe('Belém, PA')
+    expect(formatCityState({ city: ' Belém ', state: '' })).toBe('Belém')
+    expect(formatCityState({ city: '', state: 'PA' })).toBe('PA')
+    expect(formatCityState({})).toBe('')
+  })
+
+  it('por padrão mostra só cidade/UF, mesmo com o endereço completo preenchido', () => {
+    expect(formatAddress({ ...full, addressDisplay: 'city' })).toBe('Belém, PA')
+    expect(formatAddress(full)).toBe('Belém, PA')
+  })
+
+  it('completo: junta só as partes preenchidas, sem separadores sobrando', () => {
+    expect(formatAddress({ ...full, addressDisplay: 'full' })).toBe(
+      'Rua das Flores, 120, apto 3 – Centro – Belém, PA – CEP 66010-000',
+    )
+    expect(formatAddress({ street: 'Rua A', city: 'Belém', addressDisplay: 'full' })).toBe('Rua A – Belém')
+    expect(formatAddress({ number: '10', zip: ' ', addressDisplay: 'full' })).toBe('10')
+    expect(formatAddress({ addressDisplay: 'full' })).toBe('')
   })
 })

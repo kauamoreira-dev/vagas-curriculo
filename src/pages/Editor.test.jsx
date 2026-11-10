@@ -200,3 +200,130 @@ describe('área de impressão', () => {
     expect(printArea()).toBeNull()
   })
 })
+
+describe('grupos expansíveis', () => {
+  const toggle = (name) => screen.getByRole('button', { name })
+
+  it('seções de sempre começam abertas; as opcionais vazias, fechadas', () => {
+    renderEditor('/editor')
+    for (const name of ['Dados pessoais', 'Resumo', 'Experiência', 'Formação', 'Habilidades']) {
+      expect(toggle(name)).toHaveAttribute('aria-expanded', 'true')
+    }
+    for (const name of ['Objetivo profissional', 'Cursos complementares', 'Certificações', 'Projetos', 'Idiomas']) {
+      expect(toggle(name)).toHaveAttribute('aria-expanded', 'false')
+    }
+    expect(screen.queryByRole('button', { name: 'Adicionar certificação' })).toBeNull()
+  })
+
+  it('seção opcional com conteúdo já abre aberta; fechada, mostra quantos itens tem', () => {
+    openSeeded()
+    expect(toggle('Certificações')).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(toggle('Certificações'))
+    expect(toggle('Certificações')).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle('Certificações').closest('section')).toHaveTextContent('1 item')
+    expect(screen.queryByRole('textbox', { name: /Nome da certificação/ })).toBeNull()
+  })
+
+  it('abrir, adicionar e preencher um item atualiza a prévia na hora', () => {
+    renderEditor('/editor')
+    fireEvent.click(toggle('Projetos'))
+    expect(screen.getByText('Nenhum projeto adicionado.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar projeto' }))
+    fireEvent.change(screen.getByLabelText(/Nome do projeto/), { target: { value: 'Horta comunitária' } })
+    expect(within(printArea()).getByRole('heading', { level: 2, name: 'Projetos' })).toBeInTheDocument()
+    expect(within(printArea()).getByText('Horta comunitária')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remover “Horta comunitária”' }))
+    expect(within(printArea()).queryByRole('heading', { level: 2, name: 'Projetos' })).toBeNull()
+  })
+
+  it('ao gerar o PDF com pendência num grupo fechado, abre o grupo e foca o campo', async () => {
+    confirm.mockReturnValue(false)
+    const resume = {
+      ...SAMPLE_RESUME,
+      courses: [{ id: 'k1', name: 'Excel', institution: '', hours: 'muitas', year: '' }],
+    }
+    renderEditor(`/editor/${seed(resume).id}`)
+    fireEvent.click(toggle('Cursos complementares'))
+    expect(toggle('Cursos complementares')).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(savePdfButton())
+    expect(toggle('Cursos complementares')).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle('Cursos complementares').closest('section')).toHaveTextContent('Revisar')
+    expect(screen.getByRole('alert')).toHaveTextContent('Informe só o número de horas')
+    await waitFor(() => expect(screen.getByLabelText('Carga horária (horas)')).toHaveFocus())
+
+    // Fechado de novo, uma nova tentativa volta a abri-lo.
+    fireEvent.click(toggle('Cursos complementares'))
+    fireEvent.click(savePdfButton())
+    expect(toggle('Cursos complementares')).toHaveAttribute('aria-expanded', 'true')
+  })
+})
+
+describe('habilidades', () => {
+  it('adiciona com Enter ou botão, separa o que foi colado com vírgulas e remove uma a uma', () => {
+    renderEditor('/editor')
+    const input = screen.getByLabelText('Competências técnicas')
+    fireEvent.change(input, { target: { value: 'Excel' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(input).toHaveValue('')
+
+    fireEvent.change(input, { target: { value: 'SQL, Power BI' } })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Adicionar' })[0])
+    const chips = () => within(screen.getByRole('list', { name: 'Competências técnicas' })).getAllByRole('listitem')
+    expect(chips().map((chip) => chip.firstChild.textContent)).toEqual(['Excel', 'SQL', 'Power BI'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remover “SQL”' }))
+    expect(chips().map((chip) => chip.firstChild.textContent)).toEqual(['Excel', 'Power BI'])
+    expect(input).toHaveFocus()
+    expect(within(printArea()).getByText('Power BI')).toBeInTheDocument()
+  })
+
+  it('o que ficou digitado não se perde ao sair do campo', () => {
+    renderEditor('/editor')
+    const input = screen.getByLabelText('Competências comportamentais')
+    fireEvent.change(input, { target: { value: 'Empatia' } })
+    fireEvent.blur(input)
+    expect(within(screen.getByRole('list', { name: 'Competências comportamentais' })).getByText('Empatia')).toBeVisible()
+  })
+})
+
+describe('endereço', () => {
+  it('pede só cidade e estado; o endereço completo aparece quando escolhido', () => {
+    openSeeded()
+    expect(screen.getByLabelText('Cidade')).toHaveValue('Belém')
+    expect(screen.getByLabelText('Estado')).toHaveValue('PA')
+    expect(screen.queryByLabelText('Rua')).toBeNull()
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Endereço completo' }))
+    fireEvent.change(screen.getByLabelText('Rua'), { target: { value: 'Rua das Flores' } })
+    fireEvent.change(screen.getByLabelText('CEP'), { target: { value: '66010000' } })
+    expect(screen.getByLabelText('CEP')).toHaveValue('66010-000')
+    expect(within(printArea()).getByText('Rua das Flores – Belém, PA – CEP 66010-000')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Só cidade e estado' }))
+    expect(within(printArea()).getByText('Belém, PA')).toBeInTheDocument()
+  })
+
+  it('CEP incompleto mostra mensagem ao sair do campo, mas não é obrigatório', () => {
+    openSeeded()
+    fireEvent.click(screen.getByRole('radio', { name: 'Endereço completo' }))
+    const zip = screen.getByLabelText('CEP')
+    fireEvent.change(zip, { target: { value: '6601' } })
+    fireEvent.blur(zip)
+    expect(screen.getByRole('alert')).toHaveTextContent('CEP incompleto')
+    fireEvent.change(zip, { target: { value: '' } })
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+})
+
+describe('nome do arquivo PDF', () => {
+  it('durante a impressão o título da página usa o nome da pessoa e depois volta', () => {
+    print.mockImplementation(() => expect(document.title).toBe('Currículo - Marina Albuquerque'))
+    openSeeded()
+    fireEvent.click(savePdfButton())
+    expect(print).toHaveBeenCalledTimes(1)
+    window.dispatchEvent(new Event('afterprint'))
+    expect(document.title).toBe('Editor · Currículo Tapajós')
+  })
+})

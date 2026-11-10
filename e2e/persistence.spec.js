@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import {
   INDEX_KEY,
   LEGACY_KEY,
+  RESUME_PREFIX,
   createResume,
   expectSaved,
   fillWithSample,
@@ -114,4 +115,97 @@ test.describe('rascunho da versão anterior', () => {
     await page.getByRole('link', { name: 'Carla Dias · Professora', exact: true }).click()
     await expect(page.getByLabel(/Nome completo/)).toHaveValue('Carla Dias')
   })
+})
+
+test('seções novas (endereço, idiomas, habilidades, certificações) continuam lá depois de recarregar', async ({
+  page,
+}) => {
+  await createResume(page)
+  await page.getByLabel(/Nome completo/).fill('Ana Souza')
+  await page.getByLabel('Cidade', { exact: true }).fill('Santarém')
+  await page.getByLabel('Estado', { exact: true }).selectOption('PA')
+  await page.getByRole('radio', { name: 'Endereço completo' }).check()
+  await page.getByLabel('CEP', { exact: true }).fill('68005000')
+  await page.getByLabel('Competências técnicas').fill('Excel, Canva')
+  await page.getByLabel('Competências técnicas').press('Enter')
+  await page.getByRole('button', { name: 'Idiomas' }).click()
+  await page.getByRole('button', { name: 'Adicionar idioma' }).click()
+  await page.getByRole('textbox', { name: /^Idioma/ }).fill('Inglês')
+  await page.getByLabel('Nível', { exact: true }).selectOption('Avançado')
+  await page.getByRole('button', { name: 'Certificações' }).click()
+  await page.getByRole('button', { name: 'Adicionar certificação' }).click()
+  await page.getByLabel(/Nome da certificação/).fill('Primeiros socorros')
+  await expectSaved(page, (record) => record.resume.certifications[0]?.name === 'Primeiros socorros')
+
+  await page.reload()
+  await expect(page.getByLabel('Cidade', { exact: true })).toHaveValue('Santarém')
+  await expect(page.getByLabel('Estado', { exact: true })).toHaveValue('PA')
+  await expect(page.getByLabel('CEP', { exact: true })).toHaveValue('68005-000')
+  await expect(page.getByRole('list', { name: 'Competências técnicas' }).getByRole('listitem')).toHaveCount(2)
+  // Grupos opcionais com conteúdo reabrem já expandidos.
+  await expect(page.getByRole('textbox', { name: /^Idioma/ })).toHaveValue('Inglês')
+  await expect(page.getByLabel('Nível', { exact: true })).toHaveValue('Avançado')
+  await expect(page.getByLabel(/Nome da certificação/)).toHaveValue('Primeiros socorros')
+})
+
+test('currículo salvo antes das seções novas: editar não apaga nenhum dado antigo', async ({ page }) => {
+  // Formato anterior: `location` livre, `skills` em texto, sem as seções novas.
+  const old = {
+    id: 'antigo',
+    title: 'Vaga antiga',
+    templateId: 'essencial',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    resume: {
+      personal: {
+        name: 'Rita Lopes',
+        title: 'Recepcionista',
+        email: 'rita@email.com',
+        phone: '(93) 99999-0000',
+        location: 'Santarém, PA',
+        link: 'linkedin.com/in/rita',
+        photo: '',
+        photoVisible: false,
+      },
+      summary: 'Atendimento ao público há cinco anos.',
+      experience: [
+        { id: 'e1', role: 'Recepcionista', company: 'Clínica Sol', start: '2021', end: 'Atual', description: 'Agenda\nTriagem' },
+      ],
+      education: [{ id: 'f1', course: 'Ensino médio', institution: 'Escola Estadual', start: '2014', end: '2016' }],
+      skills: 'Atendimento, Excel\nOrganização',
+    },
+  }
+  await page.addInitScript(
+    ([key, record]) => {
+      if (sessionStorage.getItem('antigo-gravado')) return
+      sessionStorage.setItem('antigo-gravado', '1')
+      localStorage.setItem(key, JSON.stringify(record))
+    },
+    [`${RESUME_PREFIX}antigo`, old],
+  )
+
+  await page.goto('/editor/antigo')
+  await expect(page.getByLabel('Cidade', { exact: true })).toHaveValue('Santarém')
+  await expect(page.getByLabel('Estado', { exact: true })).toHaveValue('PA')
+  await expect(page.getByRole('list', { name: 'Competências técnicas' }).getByRole('listitem')).toHaveCount(3)
+
+  await page.getByRole('button', { name: 'Objetivo profissional' }).click()
+  await page.getByRole('textbox', { name: 'Objetivo' }).fill('Atuar como recepcionista.')
+  await expectSaved(page, (record) => record.resume.objective === 'Atuar como recepcionista.')
+
+  const [saved] = await savedResumes(page)
+  const { location, ...personal } = old.resume.personal
+  expect(location).toBe('Santarém, PA')
+  expect(saved).toMatchObject({ id: 'antigo', title: 'Vaga antiga', templateId: 'essencial' })
+  expect(saved.resume.personal).toMatchObject({ ...personal, city: 'Santarém', state: 'PA' })
+  expect(saved.resume.summary).toBe(old.resume.summary)
+  expect(saved.resume.experience).toEqual(old.resume.experience)
+  expect(saved.resume.education).toEqual(old.resume.education)
+  expect(saved.resume.skills).toEqual(['Atendimento', 'Excel', 'Organização'])
+
+  // E aparece inteiro no currículo final.
+  const sheet = page.locator('.print-only')
+  await expect(sheet.getByText('Santarém, PA')).toHaveCount(1)
+  await expect(sheet.getByText('Triagem')).toHaveCount(1)
+  await expect(sheet.getByText('Organização')).toHaveCount(1)
 })

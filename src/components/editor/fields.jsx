@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { normalizeLine, normalizeMultiline } from '@/utils/validation'
 import styles from './fields.module.css'
 
@@ -111,20 +111,186 @@ export function TextField({
   )
 }
 
-export function FormSection({ id, title, description, children, action }) {
+/**
+ * Seção do formulário. Com `onToggle`, vira um grupo expansível: o título é o botão que abre e
+ * fecha, e `status` (ex.: "2 itens", "Revisar") aparece ao lado dele mesmo com o grupo fechado.
+ */
+export function FormSection({ id, title, description, children, action, open = true, onToggle, status, alert }) {
+  const bodyId = `${id}-conteudo`
+  const collapsible = Boolean(onToggle)
   return (
-    <section className={styles.section} aria-labelledby={id}>
+    <section className={styles.section} aria-labelledby={id} data-open={open}>
       <div className={styles.sectionHead}>
-        <div>
+        <div className={styles.sectionHeading}>
           <h2 id={id} className={styles.sectionTitle}>
-            {title}
+            {collapsible ? (
+              <button
+                type="button"
+                className={styles.sectionToggle}
+                aria-expanded={open}
+                aria-controls={bodyId}
+                onClick={onToggle}
+              >
+                <span>{title}</span>
+                <span className={styles.chevron} aria-hidden="true" />
+              </button>
+            ) : (
+              title
+            )}
           </h2>
-          {description ? <p className={styles.sectionDescription}>{description}</p> : null}
+          {status ? (
+            <span className={styles.sectionStatus} data-alert={alert || undefined}>
+              {status}
+            </span>
+          ) : null}
         </div>
+        {description && open ? <p className={styles.sectionDescription}>{description}</p> : null}
       </div>
-      <div className={styles.sectionBody}>{children}</div>
-      {action ? <div className={styles.sectionAction}>{action}</div> : null}
+      <div id={bodyId} className={styles.sectionContent} hidden={!open}>
+        <div className={styles.sectionBody}>{children}</div>
+        {action ? <div className={styles.sectionAction}>{action}</div> : null}
+      </div>
     </section>
+  )
+}
+
+export function SelectField({ label, value, onChange, options, placeholder = 'Selecione', hint, ...props }) {
+  const id = useId()
+  const hintId = hint ? `${id}-dica` : undefined
+  return (
+    <div className={styles.field}>
+      <label htmlFor={id} className={styles.label}>
+        {label}
+      </label>
+      <select
+        id={id}
+        className={`${styles.control} ${styles.select}`}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-describedby={hintId}
+        {...props}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+      {hint ? (
+        <p id={hintId} className={styles.hint}>
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+// Grupo de opções exclusivas (radio), como botões lado a lado.
+export function ChoiceField({ legend, value, onChange, options }) {
+  const name = useId()
+  return (
+    <fieldset className={styles.choices}>
+      <legend className={styles.label}>{legend}</legend>
+      <div className={styles.choiceList}>
+        {options.map((option) => (
+          <label key={option.value} className={styles.choice}>
+            <input
+              type="radio"
+              name={name}
+              value={option.value}
+              checked={value === option.value}
+              onChange={() => onChange(option.value)}
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}
+
+/**
+ * Lista de itens curtos (habilidades) editada um a um: digita e confirma com Enter, vírgula,
+ * o botão Adicionar ou saindo do campo. Cada item vira um chip com botão para remover.
+ */
+export function TagField({ label, items, onAdd, onRemove, placeholder, hint }) {
+  const id = useId()
+  const hintId = `${id}-dica`
+  const [draft, setDraft] = useState('')
+  const inputRef = useRef(null)
+
+  function commit() {
+    if (!draft.trim()) return
+    onAdd(draft)
+    setDraft('')
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === 'Enter' || event.key === ',') {
+      event.preventDefault()
+      commit()
+    }
+  }
+
+  function remove(index) {
+    onRemove(index)
+    inputRef.current?.focus()
+  }
+
+  return (
+    <div className={styles.field}>
+      <label htmlFor={id} className={styles.label}>
+        {label}
+      </label>
+      {items.length ? (
+        <ul className={styles.tags} aria-label={label}>
+          {items.map((item, index) => (
+            // Pela posição: a pessoa pode repetir um item, e o texto não serve de chave
+            <li key={index} className={styles.tag}>
+              <span>{item}</span>
+              <button
+                type="button"
+                className={styles.tagRemove}
+                onClick={() => remove(index)}
+                aria-label={`Remover “${item}”`}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <div className={styles.tagInput}>
+        <input
+          ref={inputRef}
+          id={id}
+          className={styles.control}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={commit}
+          placeholder={placeholder}
+          aria-describedby={hintId}
+          enterKeyHint="done"
+        />
+        <button type="button" className={styles.tagAdd} onClick={commit} disabled={!draft.trim()}>
+          Adicionar
+        </button>
+      </div>
+      <p id={hintId} className={styles.hint}>
+        {hint}
+      </p>
+    </div>
+  )
+}
+
+export function SubGroup({ title, children }) {
+  return (
+    <div className={styles.subGroup}>
+      <h3 className={styles.subGroupTitle}>{title}</h3>
+      {children}
+    </div>
   )
 }
 

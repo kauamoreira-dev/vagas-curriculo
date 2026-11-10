@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SAMPLE_RESUME, createEmptyResume } from '@/data/resume'
+import { SAMPLE_RESUME, createEmptyResume, normalizeResume } from '@/data/resume'
 import { TEMPLATES } from '@/data/templates'
 import { ResumeDocument } from './ResumeDocument'
 import { ClassicTemplate } from './templates/ClassicTemplate'
@@ -30,6 +30,52 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+// Exemplo com todas as seções preenchidas, inclusive as opcionais.
+const FULL_RESUME = {
+  ...SAMPLE_RESUME,
+  objective: 'Atuar com análise de dados no varejo.',
+  certifications: [
+    {
+      id: 'c1',
+      name: 'Power BI Data Analyst',
+      issuer: 'Microsoft',
+      issued: 'jun/2024',
+      expires: 'jun/2026',
+      url: 'learn.microsoft.com/cred/123',
+    },
+  ],
+  courses: [{ id: 'k1', name: 'Excel Avançado', institution: 'Senac', hours: '40h', year: '2022' }],
+  projects: [
+    {
+      id: 'p1',
+      name: 'Painel de vendas',
+      description: 'Painel aberto\nAtualização diária',
+      technologies: 'Power BI, SQL',
+      url: 'https://github.com/exemplo/painel',
+    },
+  ],
+  languages: [
+    { id: 'l1', language: 'Inglês', level: 'Avançado' },
+    { id: 'l2', language: 'Espanhol', level: '' },
+  ],
+  additionalInfo: 'CNH categoria B\nDisponibilidade para viagens',
+}
+
+const SINGLE_COLUMN_ORDER = [
+  'Objetivo',
+  'Resumo',
+  'Experiência',
+  'Formação',
+  'Cursos complementares',
+  'Certificações',
+  'Projetos',
+  'Habilidades',
+  'Idiomas',
+  'Informações adicionais',
+]
+
+const sectionOf = (title) => screen.getByRole('heading', { level: 2, name: title }).closest('section')
+
 describe.each(TEMPLATE_IDS)('modelo %s', (templateId) => {
   it('mostra nome, cargo, contatos e todas as seções do currículo', () => {
     renderResume(SAMPLE_RESUME, templateId)
@@ -42,7 +88,15 @@ describe.each(TEMPLATE_IDS)('modelo %s', (templateId) => {
       'Belém, PA',
       'linkedin.com/in/exemplo',
     ])
-    expect(sectionTitles().sort()).toEqual(['Experiência', 'Formação', 'Habilidades', 'Resumo'])
+    expect(sectionTitles().sort()).toEqual([
+      'Certificações',
+      'Cursos complementares',
+      'Experiência',
+      'Formação',
+      'Habilidades',
+      'Idiomas',
+      'Resumo',
+    ])
     expect(screen.getByText(SAMPLE_RESUME.summary)).toBeInTheDocument()
   })
 
@@ -79,19 +133,101 @@ describe.each(TEMPLATE_IDS)('modelo %s', (templateId) => {
     expect(screen.getByRole('img', { name: 'Foto de perfil' })).toBeInTheDocument()
   })
 
-  it('separa as habilidades por vírgula e quebra de linha', () => {
-    renderResume({ ...SAMPLE_RESUME, skills: 'SQL,  Excel\nPython,' }, templateId)
+  it('mostra as habilidades de um currículo antigo (texto separado por vírgula e linha)', () => {
+    renderResume(normalizeResume({ ...SAMPLE_RESUME, skills: 'SQL,  Excel\nPython,', softSkills: [] }), templateId)
     expect(listTexts(sectionList('Habilidades'))).toEqual(['SQL', 'Excel', 'Python'])
   })
 
   it('mostra habilidades repetidas sem chaves duplicadas e atualiza a lista corretamente', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { rerender } = renderResume({ ...SAMPLE_RESUME, skills: 'SQL, SQL, Excel' }, templateId)
+    const only = { ...SAMPLE_RESUME, softSkills: [] }
+    const { rerender } = renderResume({ ...only, skills: ['SQL', 'SQL', 'Excel'] }, templateId)
     expect(listTexts(sectionList('Habilidades'))).toEqual(['SQL', 'SQL', 'Excel'])
 
-    rerender(<ResumeDocument templateId={templateId} resume={{ ...SAMPLE_RESUME, skills: 'SQL, Excel' }} />)
+    rerender(<ResumeDocument templateId={templateId} resume={{ ...only, skills: ['SQL', 'Excel'] }} />)
     expect(listTexts(sectionList('Habilidades'))).toEqual(['SQL', 'Excel'])
     expect(consoleError).not.toHaveBeenCalled()
+  })
+})
+
+describe.each(TEMPLATE_IDS)('seções novas no modelo %s', (templateId) => {
+  it('mostra objetivo e informações adicionais', () => {
+    renderResume(FULL_RESUME, templateId)
+    expect(within(sectionOf('Objetivo')).getByText(FULL_RESUME.objective)).toBeInTheDocument()
+    expect(listTexts(sectionList('Informações adicionais'))).toEqual(['CNH categoria B', 'Disponibilidade para viagens'])
+  })
+
+  it('mostra certificação com emissor, datas e link de verificação clicável', () => {
+    renderResume(FULL_RESUME, templateId)
+    const section = sectionOf('Certificações')
+    expect(within(section).getByRole('heading', { level: 3 })).toHaveTextContent('Power BI Data Analyst · Microsoft')
+    expect(within(section).getByText('Emitida em jun/2024 · válida até jun/2026')).toBeInTheDocument()
+    expect(within(section).getByRole('link', { name: 'learn.microsoft.com/cred/123' })).toHaveAttribute(
+      'href',
+      'https://learn.microsoft.com/cred/123',
+    )
+  })
+
+  it('mostra curso com instituição, carga horária e ano', () => {
+    renderResume(FULL_RESUME, templateId)
+    const section = sectionOf('Cursos complementares')
+    expect(within(section).getByRole('heading', { level: 3 })).toHaveTextContent('Excel Avançado · Senac')
+    expect(within(section).getByText('40 h · 2022')).toBeInTheDocument()
+  })
+
+  it('mostra projeto com tecnologias, tópicos e link', () => {
+    renderResume(FULL_RESUME, templateId)
+    const section = sectionOf('Projetos')
+    expect(within(section).getByText('Power BI, SQL')).toBeInTheDocument()
+    expect(listTexts(within(section).getByRole('list'))).toEqual(['Painel aberto', 'Atualização diária'])
+    expect(within(section).getByRole('link')).toHaveAttribute('href', 'https://github.com/exemplo/painel')
+  })
+
+  it('mostra idiomas com nível, quando informado', () => {
+    renderResume(FULL_RESUME, templateId)
+    expect(listTexts(sectionList('Idiomas'))).toEqual(['InglêsAvançado', 'Espanhol'])
+  })
+
+  it('separa habilidades técnicas e comportamentais com subtítulos só quando há as duas', () => {
+    const { rerender } = renderResume(FULL_RESUME, templateId)
+    const section = sectionOf('Habilidades')
+    expect(within(section).getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual([
+      'Técnicas',
+      'Comportamentais',
+    ])
+    expect(within(section).getAllByRole('list').map(listTexts)).toEqual([SAMPLE_RESUME.skills, SAMPLE_RESUME.softSkills])
+
+    rerender(<ResumeDocument templateId={templateId} resume={{ ...FULL_RESUME, skills: [] }} />)
+    expect(within(sectionOf('Habilidades')).queryByRole('heading', { level: 3 })).toBeNull()
+    expect(listTexts(sectionList('Habilidades'))).toEqual(SAMPLE_RESUME.softSkills)
+  })
+
+  it('não mostra título de seção opcional sem conteúdo (itens vazios ou só com espaços)', () => {
+    renderResume(
+      {
+        ...SAMPLE_RESUME,
+        objective: '  ',
+        certifications: [{ id: 'c', name: ' ', issuer: '', issued: 'jun/2024', expires: '', url: 'x.com' }],
+        courses: [{ id: 'k', name: '', institution: '', hours: '40', year: '2022' }],
+        projects: [{ id: 'p', name: '', description: '', technologies: 'React', url: '' }],
+        languages: [{ id: 'l', language: ' ', level: 'Básico' }],
+        skills: [],
+        softSkills: [],
+        additionalInfo: '\n',
+      },
+      templateId,
+    )
+    expect(sectionTitles().sort()).toEqual(['Experiência', 'Formação', 'Resumo'])
+  })
+
+  it('mostra só cidade/UF por padrão e o endereço completo quando escolhido', () => {
+    const address = { street: 'Rua das Flores', number: '120', complement: 'apto 3', district: 'Centro', zip: '66010-000' }
+    const { rerender } = renderResume(withPersonal(address), templateId)
+    expect(screen.getByText('Belém, PA')).toBeInTheDocument()
+    expect(screen.queryByText(/Rua das Flores/)).toBeNull()
+
+    rerender(<ResumeDocument templateId={templateId} resume={withPersonal({ ...address, addressDisplay: 'full' })} />)
+    expect(screen.getByText('Rua das Flores, 120, apto 3 – Centro – Belém, PA – CEP 66010-000')).toBeInTheDocument()
   })
 })
 
@@ -131,16 +267,46 @@ describe('conteúdo parcial', () => {
     renderResume(withPersonal({ email: ' ', phone: '', link: '' }))
     expect(listTexts(screen.getAllByRole('list')[0])).toEqual(['Belém, PA'])
   })
+
+  it('endereço completo com parte dos campos não deixa separadores sobrando', () => {
+    renderResume(
+      withPersonal({ email: '', phone: '', link: '', city: '', street: 'Rua A', zip: '66010-000', addressDisplay: 'full' }),
+    )
+    expect(listTexts(screen.getAllByRole('list')[0])).toEqual(['Rua A – PA – CEP 66010-000'])
+  })
+
+  it('sem cidade nem estado, o endereço fica fora dos contatos', () => {
+    renderResume(withPersonal({ city: '', state: '', street: 'Rua A' }))
+    expect(listTexts(screen.getAllByRole('list')[0])).toEqual([
+      'marina.exemplo@email.com',
+      '(91) 90000-0000',
+      'linkedin.com/in/exemplo',
+    ])
+  })
 })
 
 describe('ordem das seções', () => {
   it.each([
-    ['classico', ['Resumo', 'Experiência', 'Formação', 'Habilidades']],
-    // No Moderno, as habilidades ficam na coluna lateral, antes da área principal.
-    ['moderno', ['Habilidades', 'Resumo', 'Experiência', 'Formação']],
-    ['essencial', ['Resumo', 'Experiência', 'Formação', 'Habilidades']],
+    ['classico', SINGLE_COLUMN_ORDER],
+    // No Moderno, habilidades e idiomas ficam na coluna lateral, antes da área principal.
+    [
+      'moderno',
+      [
+        'Habilidades',
+        'Idiomas',
+        'Objetivo',
+        'Resumo',
+        'Experiência',
+        'Formação',
+        'Cursos complementares',
+        'Certificações',
+        'Projetos',
+        'Informações adicionais',
+      ],
+    ],
+    ['essencial', SINGLE_COLUMN_ORDER],
   ])('%s', (templateId, expected) => {
-    renderResume(SAMPLE_RESUME, templateId)
+    renderResume(FULL_RESUME, templateId)
     expect(sectionTitles()).toEqual(expected)
   })
 })

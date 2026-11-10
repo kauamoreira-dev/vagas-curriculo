@@ -88,6 +88,38 @@ export function validatePhone(value) {
   return null
 }
 
+// ---------- CEP ----------
+
+// Máscara 00000-000 enquanto a pessoa digita.
+export function formatZip(value) {
+  const digits = String(value ?? '').replace(/\D/g, '').slice(0, 8)
+  return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits
+}
+
+export function validateZip(value) {
+  if (isBlank(value)) return null
+  return String(value).replace(/\D/g, '').length === 8 ? null : 'CEP incompleto. Use 8 dígitos. Ex.: 66010-000'
+}
+
+// ---------- Links ----------
+
+// Endereço web com domínio (ex.: github.com/nome ou https://site.com.br). O protocolo é opcional.
+const URL_PATTERN = /^(https?:\/\/)?[^\s/@]+\.[a-z]{2,}([/?#]\S*)?$/i
+
+export function validateUrl(value) {
+  if (isBlank(value)) return null
+  return URL_PATTERN.test(String(value).trim()) ? null : 'Link inválido. Ex.: github.com/seu-nome ou https://site.com'
+}
+
+// ---------- Carga horária ----------
+
+export function validateHours(value) {
+  if (isBlank(value)) return null
+  const match = String(value).trim().match(/^(\d{1,4})\s*(h|hs|horas?)?$/i)
+  if (!match || Number(match[1]) === 0) return 'Informe só o número de horas. Ex.: 40'
+  return null
+}
+
 // ---------- Datas ----------
 
 const MONTHS = [
@@ -207,14 +239,42 @@ export function validatePeriod(startValue, endValue, { allowFutureEnd = false, t
 
 // ---------- Currículo completo ----------
 
+/** Ano isolado (ex.: conclusão de um curso). Aceita até 10 anos no futuro (curso em andamento). */
+export function validateYear(value, { today = new Date() } = {}) {
+  if (isBlank(value)) return null
+  const text = String(value).trim()
+  if (!/^\d{4}$/.test(text)) return 'Informe o ano com 4 dígitos. Ex.: 2023'
+  const year = Number(text)
+  if (year < MIN_YEAR || year > today.getFullYear() + 10) return 'Confira o ano informado.'
+  return null
+}
+
+/** Emissão e validade de uma certificação. A emissão não pode ser futura; a validade pode. */
+export function validateCertificationDates(issuedValue, expiresValue, { today = new Date() } = {}) {
+  const errors = {}
+  const issued = parseResumeDate(issuedValue)
+  const expires = parseResumeDate(expiresValue)
+  if (issued.error) errors.issued = issued.error
+  else if (issued.ongoing) errors.issued = 'Informe quando a certificação foi emitida.'
+  else if (!issued.empty && isFuture(issued, today)) errors.issued = 'A emissão não pode estar no futuro.'
+
+  if (expires.error) errors.expires = expires.error
+  else if (expires.ongoing) errors.expires = 'Informe a data de validade ou deixe em branco.'
+  else if (!expires.empty && !issued.empty && !errors.issued && compareDates(expires, issued) < 0) {
+    errors.expires = 'A validade não pode ser anterior à emissão.'
+  }
+  return errors
+}
+
+
 function hasAnyValue(item, fields) {
   return fields.some((field) => !isBlank(item[field]))
 }
 
 /**
  * Valida o currículo e retorna um mapa { chaveDoCampo: mensagem }.
- * Chaves: `personal.email`, `experience.<id>.role`, `education.<id>.end` etc.
- * Itens de experiência/formação totalmente vazios são ignorados (não aparecem no currículo).
+ * Chaves: `personal.email`, `experience.<id>.role`, `courses.<id>.year` etc.
+ * Itens totalmente vazios são ignorados (não aparecem no currículo). Endereço e seções novas são opcionais.
  */
 export function validateResume(resume, { today = new Date() } = {}) {
   const errors = {}
@@ -229,6 +289,8 @@ export function validateResume(resume, { today = new Date() } = {}) {
   if (isBlank(personal.email) && isBlank(personal.phone)) {
     errors['personal.email'] = 'Informe ao menos um contato: e-mail ou telefone.'
   }
+  const zipError = validateZip(personal.zip)
+  if (zipError) errors['personal.zip'] = zipError
 
   for (const item of resume.experience) {
     if (!hasAnyValue(item, ['role', 'company', 'start', 'end', 'description'])) continue
@@ -248,6 +310,40 @@ export function validateResume(resume, { today = new Date() } = {}) {
     const period = validatePeriod(item.start, item.end, { allowFutureEnd: true, today })
     if (period.start) errors[`${key}.start`] = period.start
     if (period.end) errors[`${key}.end`] = period.end
+  }
+
+  for (const item of resume.certifications ?? []) {
+    if (!hasAnyValue(item, ['name', 'issuer', 'issued', 'expires', 'url'])) continue
+    const key = `certifications.${item.id}`
+    if (isBlank(item.name)) errors[`${key}.name`] = 'Informe o nome da certificação.'
+    const dates = validateCertificationDates(item.issued, item.expires, { today })
+    if (dates.issued) errors[`${key}.issued`] = dates.issued
+    if (dates.expires) errors[`${key}.expires`] = dates.expires
+    const urlError = validateUrl(item.url)
+    if (urlError) errors[`${key}.url`] = urlError
+  }
+
+  for (const item of resume.courses ?? []) {
+    if (!hasAnyValue(item, ['name', 'institution', 'hours', 'year'])) continue
+    const key = `courses.${item.id}`
+    if (isBlank(item.name)) errors[`${key}.name`] = 'Informe o nome do curso.'
+    const hoursError = validateHours(item.hours)
+    if (hoursError) errors[`${key}.hours`] = hoursError
+    const yearError = validateYear(item.year, { today })
+    if (yearError) errors[`${key}.year`] = yearError
+  }
+
+  for (const item of resume.languages ?? []) {
+    if (!hasAnyValue(item, ['language', 'level'])) continue
+    if (isBlank(item.language)) errors[`languages.${item.id}.language`] = 'Informe o idioma.'
+  }
+
+  for (const item of resume.projects ?? []) {
+    if (!hasAnyValue(item, ['name', 'description', 'technologies', 'url'])) continue
+    const key = `projects.${item.id}`
+    if (isBlank(item.name)) errors[`${key}.name`] = 'Informe o nome do projeto.'
+    const urlError = validateUrl(item.url)
+    if (urlError) errors[`${key}.url`] = urlError
   }
 
   return errors

@@ -49,6 +49,24 @@ function MissingResume() {
   )
 }
 
+/**
+ * Abre o diálogo de impressão do navegador ("Salvar como PDF").
+ * O título da página vira o nome sugerido do arquivo no Chrome e no Edge: durante a impressão,
+ * usa o nome da pessoa. O cabeçalho e o rodapé automáticos são evitados pelo @page sem margem.
+ */
+function printResume(resume) {
+  const previousTitle = document.title
+  const name = resume.personal.name.trim()
+  document.title = name ? `Currículo - ${name}` : 'Currículo'
+  // No celular a impressão não bloqueia: o título volta só quando o diálogo fecha.
+  const restore = () => {
+    document.title = previousTitle
+    window.removeEventListener('afterprint', restore)
+  }
+  window.addEventListener('afterprint', restore)
+  window.print()
+}
+
 function EditorWorkspace({ draft }) {
   const { resume, templateId, setTemplateId } = draft
   const [searchParams, setSearchParams] = useSearchParams()
@@ -59,6 +77,8 @@ function EditorWorkspace({ draft }) {
   const [actualSize, setActualSize] = useState(false)
   const [inAppBrowser] = useState(() => isInAppBrowser(navigator.userAgent))
   const [showAllErrors, setShowAllErrors] = useState(false)
+  // Incrementado a cada "Salvar PDF" com pendências: o formulário abre os grupos onde elas estão.
+  const [revealErrors, setRevealErrors] = useState(0)
   // Trocar a chave recria o formulário e zera os campos marcados como visitados.
   const [formKey, setFormKey] = useState(0)
   const errors = useMemo(() => validateResume(resume), [resume])
@@ -115,6 +135,7 @@ function EditorWorkspace({ draft }) {
   function savePdf() {
     if (errorCount > 0) {
       setShowAllErrors(true)
+      setRevealErrors((count) => count + 1)
       const message =
         errorCount === 1
           ? 'Há 1 campo para revisar no currículo. Gerar o PDF mesmo assim?'
@@ -128,7 +149,7 @@ function EditorWorkspace({ draft }) {
         return
       }
     }
-    window.print()
+    printResume(resume)
   }
 
   const isEmpty = !hasResumeContent(resume)
@@ -224,6 +245,7 @@ function EditorWorkspace({ draft }) {
               actions={draft}
               errors={errors}
               showAllErrors={showAllErrors}
+              revealErrors={revealErrors}
             />
             <div className={styles.mobileActions}>
               <Button variant="secondary" size="sm" onClick={fillWithSample}>

@@ -154,46 +154,75 @@
   color: #fff;
 }
 
-/*
- * Coluna azul no PDF, na altura inteira de todas as folhas:
- * - `.page::before` (abaixo) cobre a área de conteúdo de cada folha;
- * - as caixas de margem desta página nomeada cobrem as margens de 14mm do @page global.
- *   Usam borda, não fundo: o Chrome omite fundos quando "Gráficos de fundo" está desmarcado.
- */
-@page moderno {
-  @top-left {
-    content: '';
-    width: 0;
-    border-left: 250px solid #0b2470;
-  }
-
-  @bottom-left {
-    content: '';
-    width: 0;
-    border-left: 250px solid #0b2470;
-  }
+.entryMeta {
+  font-size: 12px;
+  color: #5a6475;
 }
 
-/* Impressão: margens verticais vêm do @page; blocos não se partem entre páginas */
+.entryLink {
+  justify-self: start;
+  font-size: 12px;
+  color: #0040cd;
+  text-decoration: none;
+}
+
+.skillGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.groupTitle {
+  font-size: 11px;
+  font-weight: 600;
+  color: #d9e3fb;
+}
+
+.languages {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.languages li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 8px;
+}
+
+.languageName {
+  font-weight: 600;
+  color: #fff;
+}
+
+.languageLevel {
+  color: #a9bff2;
+}
+
+/*
+ * Impressão: o @page não tem margem (ver index.css). A margem vertical de 14mm é o padding
+ * da folha, repetido em cada página (box-decoration-break: clone), e a coluna azul é uma faixa
+ * fixa, que o navegador repete na altura inteira de cada folha.
+ * A faixa fica atrás da coluna, na mesma cor; print-color-adjust (herdado de .page) a mantém
+ * mesmo com "Gráficos de fundo" desmarcado.
+ */
 @media print {
   .page {
-    /* Altura da área útil da folha (A4 menos as margens de 14mm): a coluna preenche a 1ª folha
-       mesmo com pouco conteúdo */
-    min-height: calc(297mm - 28mm);
+    min-height: 0;
+    padding-block: 14mm;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
     background: none;
-    page: moderno;
   }
 
-  /*
-   * Faixa fixa: no PDF se repete em cada folha. A coluna fica por cima, na mesma cor.
-   * Os -14mm avançam sobre as margens onde o navegador permitir (o Chrome recorta na área útil;
-   * lá as caixas de margem acima completam o azul).
-   */
   .page::before {
     content: '';
     position: fixed;
-    top: -14mm;
-    bottom: -14mm;
+    top: 0;
+    bottom: 0;
     left: 0;
     z-index: -1;
     width: 250px;
@@ -217,5 +246,21 @@
   .paragraph {
     orphans: 3;
     widows: 3;
+  }
+
+  /*
+   * Sem suporte (Safari): a margem volta para o @page. A faixa avança sobre as margens onde
+   * o navegador permitir, e a coluna preenche a área útil da 1ª folha mesmo com pouco conteúdo.
+   */
+  @supports not (box-decoration-break: clone) {
+    .page {
+      min-height: calc(297mm - 28mm);
+      padding-block: 0;
+    }
+
+    .page::before {
+      top: -14mm;
+      bottom: -14mm;
+    }
   }
 }

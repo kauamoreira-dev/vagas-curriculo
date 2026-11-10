@@ -152,12 +152,24 @@ select {
 
 /* Impressão: só a folha do currículo vai para o papel/PDF */
 /*
- * Margem vertical na própria página impressa, para que se repita em todas as folhas
- * do PDF. As margens laterais continuam vindo do padding de cada modelo.
+ * PDF (Salvar PDF → impressão do navegador): A4 sem margem de página.
+ * O Chrome e o Edge desenham cabeçalho e rodapé automáticos (URL, data, título, nº de página)
+ * dentro da margem da página; sem margem, não há onde desenhá-los e eles não aparecem, mesmo com
+ * a opção marcada. A margem da folha vem do padding de cada modelo, repetido em todas as
+ * páginas com box-decoration-break: clone.
+ * CSS não controla o diálogo de impressão: se a pessoa escolher outras margens nele, o navegador
+ * pode voltar a desenhá-los.
  */
 @page {
   size: A4;
-  margin: 14mm 0;
+  margin: 0;
+}
+
+/* Sem box-decoration-break (Safari, que não imprime cabeçalhos por padrão): margem no @page */
+@supports not (box-decoration-break: clone) {
+  @page {
+    margin: 14mm 0;
+  }
 }
 
 @media screen {
@@ -167,6 +179,15 @@ select {
 }
 
 @media print {
+  /*
+   * O branco do papel vem do html. Com fundo, o body seria pintado por cima das faixas fixas
+   * com z-index negativo (a coluna azul do Moderno), escondendo-as fora da área do conteúdo.
+   */
+  body {
+    min-height: 0;
+    background: none;
+  }
+
   #root {
     display: none;
   }
