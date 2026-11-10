@@ -9,6 +9,7 @@ import {
   splitBySeverity,
   validateEmail,
   validatePeriod,
+  validateBirthDate,
   validateCertificationDates,
   validateHours,
   validatePhone,
@@ -357,5 +358,29 @@ describe('gravidade das pendências', () => {
       blocking: ['personal.name', 'personal.email', 'experience.e1.start'],
       warnings: ['experience.e1.company'],
     })
+  })
+})
+
+describe('validateBirthDate', () => {
+  it('é opcional e aceita datas válidas', () => {
+    expect(validateBirthDate('', { today })).toBeNull()
+    expect(validateBirthDate('1996-03-12', { today })).toBeNull()
+    expect(validateBirthDate('12/03/1996', { today })).toBeNull()
+  })
+
+  it('rejeita data inexistente, futura, idade menor que 14 ou maior que 100', () => {
+    expect(validateBirthDate('31/02/1996', { today })).toMatch(/Data inválida/)
+    expect(validateBirthDate('2027-01-01', { today })).toMatch(/futuro/)
+    expect(validateBirthDate('2015-01-01', { today })).toMatch(/menor que 14/)
+    expect(validateBirthDate('1900-01-01', { today })).toMatch(/ano de nascimento/)
+  })
+
+  it('no currículo, data inválida é erro (impede o PDF)', () => {
+    const errors = validateResume(
+      { personal: { name: 'Ana', email: 'ana@email.com', birthDate: '2030-01-01' }, experience: [], education: [] },
+      { today },
+    )
+    expect(errors['personal.birthDate']).toMatch(/futuro/)
+    expect(errorSeverity('personal.birthDate')).toBe('error')
   })
 })

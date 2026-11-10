@@ -534,3 +534,28 @@ describe('ajustes deste currículo', () => {
     return waitFor(() => expect(resumeStore.getResume(record.id).title).toBe('Vaga X'))
   })
 })
+
+describe('data de nascimento', () => {
+  it('mostra a idade na prévia; a caixa "Mostrar idade" aparece com a data e a oculta', () => {
+    openSeeded()
+    expect(screen.queryByRole('checkbox', { name: 'Mostrar idade no currículo' })).toBeNull()
+    fireEvent.change(screen.getByLabelText('Data de nascimento'), { target: { value: '1990-01-15' } })
+    const age = `${new Date().getFullYear() - 1990 - (new Date() < new Date(new Date().getFullYear(), 0, 15) ? 1 : 0)} anos`
+    expect(within(printArea()).getByText(age)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Mostrar idade no currículo' }))
+    expect(within(printArea()).queryByText(age)).toBeNull()
+    expect(screen.getByLabelText('Data de nascimento')).toHaveValue('1990-01-15')
+  })
+
+  it('data no futuro mostra erro ao sair do campo e impede o PDF', () => {
+    openSeeded()
+    const field = screen.getByLabelText('Data de nascimento')
+    fireEvent.change(field, { target: { value: '2999-01-01' } })
+    fireEvent.blur(field)
+    expect(screen.getByRole('alert')).toHaveTextContent('não pode estar no futuro')
+    fireEvent.click(savePdfButton())
+    expect(print).not.toHaveBeenCalled()
+    expect(screen.getByRole('region', { name: /Corrija 1 campo/ })).toBeInTheDocument()
+  })
+})

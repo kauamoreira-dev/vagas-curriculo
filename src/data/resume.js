@@ -54,6 +54,8 @@ export function createEmptyResume() {
       title: '',
       email: '',
       phone: '',
+      birthDate: '', // AAAA-MM-DD (campo de data) ou DD/MM/AAAA; o currículo mostra a idade
+      ageVisible: true,
       city: '',
       state: '',
       street: '',
@@ -121,6 +123,7 @@ function normalizePersonal(raw, empty) {
   const personal = {}
   for (const field of Object.keys(empty)) personal[field] = text(raw?.[field])
   personal.photoVisible = raw?.photoVisible !== false
+  personal.ageVisible = raw?.ageVisible !== false
   personal.addressDisplay = raw?.addressDisplay === 'full' ? 'full' : 'city'
   personal.state = STATES.includes(personal.state) ? personal.state : ''
   // Currículos salvos antes da separação em cidade e estado.
@@ -156,7 +159,7 @@ export function normalizeResume(raw) {
 const filled = (value) => typeof value === 'string' && Boolean(value.trim())
 const hasItemText = (item) => Object.entries(item).some(([field, value]) => field !== 'id' && filled(value))
 // Preferências de exibição não são conteúdo digitado.
-const PERSONAL_SETTINGS = ['photoVisible', 'addressDisplay']
+const PERSONAL_SETTINGS = ['photoVisible', 'ageVisible', 'addressDisplay']
 
 // Algo digitado em qualquer campo (a foto conta; espaços em branco e as preferências de exibição não).
 export function hasResumeContent(resume) {
@@ -185,6 +188,8 @@ export const SAMPLE_RESUME = {
     title: 'Analista de Dados',
     email: 'marina.exemplo@email.com',
     phone: '(91) 90000-0000',
+    birthDate: '',
+    ageVisible: true,
     city: 'Belém',
     state: 'PA',
     street: '',

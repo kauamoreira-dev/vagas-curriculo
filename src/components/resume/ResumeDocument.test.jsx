@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, within } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { SAMPLE_RESUME, createEmptyResume, normalizeResume } from '@/data/resume'
 import { TEMPLATES } from '@/data/templates'
 import { ResumeDocument } from './ResumeDocument'
@@ -250,6 +250,34 @@ describe('paginação', () => {
     expect(short).not.toHaveAttribute('data-long')
     expect(long).toHaveAttribute('data-long', 'true')
     expect(within(sectionOf('Projetos')).getByRole('article')).toHaveAttribute('data-long', 'true')
+  })
+})
+
+describe.each(TEMPLATE_IDS)('idade no modelo %s', (templateId) => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 10, 10))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('mostra a idade calculada junto dos contatos, depois do telefone', () => {
+    renderResume(withPersonal({ birthDate: '1996-03-12' }), templateId)
+    expect(listTexts(screen.getAllByRole('list')[0])).toEqual([
+      'marina.exemplo@email.com',
+      '(91) 90000-0000',
+      '30 anos',
+      'Belém, PA',
+      'linkedin.com/in/exemplo',
+    ])
+  })
+
+  it('não mostra a idade quando a pessoa a oculta ou a data é inválida', () => {
+    const { rerender } = renderResume(withPersonal({ birthDate: '1996-03-12', ageVisible: false }), templateId)
+    expect(screen.queryByText(/anos$/)).toBeNull()
+    rerender(<ResumeDocument templateId={templateId} resume={withPersonal({ birthDate: '2030-01-01' })} />)
+    expect(screen.queryByText(/anos$/)).toBeNull()
   })
 })
 

@@ -1,4 +1,5 @@
 // Validações e formatações do formulário. Funções puras: não alteram o currículo salvo.
+import { ageFromBirthDate } from '@/utils/resumeText'
 
 // ---------- Espaços ----------
 
@@ -109,6 +110,22 @@ const URL_PATTERN = /^(https?:\/\/)?[^\s/@]+\.[a-z]{2,}([/?#]\S*)?$/i
 export function validateUrl(value) {
   if (isBlank(value)) return null
   return URL_PATTERN.test(String(value).trim()) ? null : 'Link inválido. Ex.: github.com/seu-nome ou https://site.com'
+}
+
+// ---------- Data de nascimento ----------
+
+const MIN_AGE = 14
+const MAX_AGE = 100
+
+/** Opcional. Precisa ser uma data que existe, não futura, e dar uma idade de 14 a 100 anos. */
+export function validateBirthDate(value, { today = new Date() } = {}) {
+  if (isBlank(value)) return null
+  const age = ageFromBirthDate(value, today)
+  if (age === null) return 'Data inválida. Use dia, mês e ano (ex.: 12/03/1996).'
+  if (age < 0) return 'A data de nascimento não pode estar no futuro.'
+  if (age < MIN_AGE) return `Confira a data: a idade calculada é menor que ${MIN_AGE} anos.`
+  if (age > MAX_AGE) return 'Confira o ano de nascimento.'
+  return null
 }
 
 // ---------- Carga horária ----------
@@ -291,6 +308,8 @@ export function validateResume(resume, { today = new Date() } = {}) {
   }
   const zipError = validateZip(personal.zip)
   if (zipError) errors['personal.zip'] = zipError
+  const birthError = validateBirthDate(personal.birthDate, { today })
+  if (birthError) errors['personal.birthDate'] = birthError
 
   for (const item of resume.experience) {
     if (!hasAnyValue(item, ['role', 'company', 'start', 'end', 'description'])) continue

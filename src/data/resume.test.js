@@ -254,3 +254,27 @@ describe('splitLocation', () => {
     expect(splitLocation(location)).toEqual(expected)
   })
 })
+
+describe('data de nascimento e idade', () => {
+  it('currículo antigo ganha data vazia e idade visível', () => {
+    const { personal } = normalizeResume({ personal: { name: 'Ana', location: 'Belém, PA' } })
+    expect(personal).toMatchObject({ birthDate: '', ageVisible: true })
+  })
+
+  it('preserva a data e só oculta a idade quando ageVisible é exatamente false', () => {
+    const personal = (value) => normalizeResume({ personal: value }).personal
+    expect(personal({ birthDate: '1996-03-12', ageVisible: false })).toMatchObject({
+      birthDate: '1996-03-12',
+      ageVisible: false,
+    })
+    expect(personal({ ageVisible: 'false' }).ageVisible).toBe(true)
+  })
+
+  it('ocultar a idade sozinho não conta como conteúdo; a data conta', () => {
+    const resume = createEmptyResume()
+    resume.personal.ageVisible = false
+    expect(hasResumeContent(resume)).toBe(false)
+    resume.personal.birthDate = '1996-03-12'
+    expect(hasResumeContent(resume)).toBe(true)
+  })
+})

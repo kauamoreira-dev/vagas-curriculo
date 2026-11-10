@@ -619,3 +619,27 @@ textarea.control {
     width: 44px;
   }
 }
+
+/* Caixa de seleção com rótulo (ex.: Mostrar idade no currículo) */
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -6px;
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--blue-600);
+}
+
+@media (pointer: coarse) {
+  .checkbox {
+    min-height: 44px;
+  }
+}

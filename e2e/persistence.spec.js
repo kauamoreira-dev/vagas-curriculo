@@ -209,3 +209,19 @@ test('currículo salvo antes das seções novas: editar não apaga nenhum dado a
   await expect(sheet.getByText('Triagem')).toHaveCount(1)
   await expect(sheet.getByText('Organização')).toHaveCount(1)
 })
+
+test('data de nascimento: a idade aparece na prévia e a escolha de ocultá-la fica salva', async ({ page }) => {
+  const id = await createResume(page)
+  await page.getByLabel(/Nome completo/).fill('Ana Souza')
+  await page.getByLabel('Data de nascimento').fill('1990-01-15')
+  const sheet = page.locator('.print-only')
+  await expect(sheet.getByText(/^\d+ anos$/)).toHaveCount(1)
+
+  await page.getByRole('checkbox', { name: 'Mostrar idade no currículo' }).uncheck()
+  await expect(sheet.getByText(/^\d+ anos$/)).toHaveCount(0)
+  await expectSaved(page, (record) => record.id === id && record.resume.personal.ageVisible === false)
+
+  await page.reload()
+  await expect(page.getByLabel('Data de nascimento')).toHaveValue('1990-01-15')
+  await expect(page.getByRole('checkbox', { name: 'Mostrar idade no currículo' })).not.toBeChecked()
+})

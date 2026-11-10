@@ -71,3 +71,38 @@ export function formatAddress(personal) {
   const zip = String(personal.zip ?? '').trim()
   return join([street, personal.district, cityState, zip && `CEP ${zip}`], ' – ')
 }
+
+/**
+ * Data de nascimento do formulário (AAAA-MM-DD do campo de data, ou DD/MM/AAAA digitada) como
+ * { year, month, day }, ou null se não for uma data que existe.
+ */
+export function parseBirthDate(value) {
+  const text = String(value ?? '').trim()
+  const iso = text.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const br = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  const [year, month, day] = iso
+    ? [iso[1], iso[2], iso[3]].map(Number)
+    : br
+      ? [br[3], br[2], br[1]].map(Number)
+      : []
+  if (!year) return null
+  const date = new Date(year, month - 1, day)
+  const exists = date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+  return exists ? { year, month, day } : null
+}
+
+/** Idade completa em `today` (conta só depois do aniversário), ou null se a data for inválida. */
+export function ageFromBirthDate(value, today = new Date()) {
+  const birth = parseBirthDate(value)
+  if (!birth) return null
+  const month = today.getMonth() + 1
+  const beforeBirthday = month < birth.month || (month === birth.month && today.getDate() < birth.day)
+  return today.getFullYear() - birth.year - (beforeBirthday ? 1 : 0)
+}
+
+// "28 anos" (ou "1 ano"); vazio se a data for inválida ou no futuro.
+export function formatAge(value, today = new Date()) {
+  const age = ageFromBirthDate(value, today)
+  if (age === null || age < 0) return ''
+  return age === 1 ? '1 ano' : `${age} anos`
+}

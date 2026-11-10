@@ -1,5 +1,6 @@
 import {
   formatAddress,
+  formatAge,
   formatPeriod,
   hasCertificationContent,
   hasCourseContent,
@@ -47,6 +48,8 @@ export function ContactList({ personal, styles }) {
   const items = [
     { text: personal.email },
     { text: personal.phone },
+    // Idade calculada na hora (no PDF, a do dia em que foi gerado), se a pessoa quiser mostrar.
+    { text: personal.ageVisible === false ? '' : formatAge(personal.birthDate) },
     // Endereço completo é longo: os modelos podem dar uma linha só para ele.
     { text: formatAddress(personal), address: fullAddress },
     { text: personal.link },

@@ -336,6 +336,25 @@ export function ResumeForm({
             onChange={(value) => setPersonalField('link', value)}
             placeholder="linkedin.com/in/seu-nome"
           />
+          <TextField
+            label="Data de nascimento"
+            type="date"
+            {...validation('personal.birthDate')}
+            value={personal.birthDate}
+            onChange={(value) => setPersonalField('birthDate', value)}
+            autoComplete="bday"
+            hint="Opcional. O currículo mostra só a idade, calculada a partir desta data."
+          />
+          {personal.birthDate ? (
+            <label className={styles.checkbox}>
+              <input
+                type="checkbox"
+                checked={personal.ageVisible !== false}
+                onChange={(event) => setPersonalField('ageVisible', event.target.checked)}
+              />
+              Mostrar idade no currículo
+            </label>
+          ) : null}
 
           <SubGroup title="Endereço">
             <div className={styles.cityRow}>

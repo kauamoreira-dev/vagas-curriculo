@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ageFromBirthDate,
   formatAddress,
+  formatAge,
+  parseBirthDate,
   formatCityState,
   formatPeriod,
   hasEducationContent,
@@ -122,5 +125,37 @@ describe('endereço', () => {
     expect(formatAddress({ street: 'Rua A', city: 'Belém', addressDisplay: 'full' })).toBe('Rua A – Belém')
     expect(formatAddress({ number: '10', zip: ' ', addressDisplay: 'full' })).toBe('10')
     expect(formatAddress({ addressDisplay: 'full' })).toBe('')
+  })
+})
+
+describe('idade', () => {
+  const today = new Date(2026, 10, 10) // 10/11/2026
+
+  it('lê o formato do campo de data e o digitado (DD/MM/AAAA); rejeita datas que não existem', () => {
+    expect(parseBirthDate('1996-03-12')).toEqual({ year: 1996, month: 3, day: 12 })
+    expect(parseBirthDate('12/03/1996')).toEqual({ year: 1996, month: 3, day: 12 })
+    expect(parseBirthDate('2/3/1996')).toEqual({ year: 1996, month: 3, day: 2 })
+    expect(parseBirthDate('31/02/1996')).toBeNull()
+    expect(parseBirthDate('1996')).toBeNull()
+    expect(parseBirthDate('')).toBeNull()
+  })
+
+  it('conta o ano só depois do aniversário', () => {
+    expect(ageFromBirthDate('1996-11-10', today)).toBe(30) // aniversário hoje
+    expect(ageFromBirthDate('1996-11-11', today)).toBe(29) // amanhã
+    expect(ageFromBirthDate('1996-03-12', today)).toBe(30)
+    expect(ageFromBirthDate('1996-12-01', today)).toBe(29)
+  })
+
+  it('nascido em 29/02 faz aniversário em 1º/03 nos anos não bissextos', () => {
+    expect(ageFromBirthDate('2000-02-29', new Date(2026, 1, 28))).toBe(25)
+    expect(ageFromBirthDate('2000-02-29', new Date(2026, 2, 1))).toBe(26)
+  })
+
+  it('formata "N anos"; vazio para data inválida ou futura', () => {
+    expect(formatAge('1996-03-12', today)).toBe('30 anos')
+    expect(formatAge('2025-10-01', today)).toBe('1 ano')
+    expect(formatAge('2030-01-01', today)).toBe('')
+    expect(formatAge('ontem', today)).toBe('')
   })
 })
