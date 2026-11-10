@@ -36,6 +36,34 @@ test.describe('celular', () => {
     })
   }
 
+  for (const width of PHONE_WIDTHS) {
+    test(`em ${width}px o índice aberto é uma grade compacta, sem rolagem lateral e com toque de 44 px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 })
+      await createResume(page)
+      await fillWithSample(page)
+      await page.getByText('Seções', { exact: true }).click()
+      const links = page.getByRole('navigation', { name: 'Seções do currículo' }).getByRole('button')
+      await expect(links).toHaveCount(11)
+      const boxes = await links.evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const { x, height } = button.getBoundingClientRect()
+          return { x: Math.round(x), height }
+        }),
+      )
+      // Duas colunas: só duas posições horizontais distintas.
+      expect(new Set(boxes.map((box) => box.x)).size).toBe(2)
+      expect(Math.min(...boxes.map((box) => box.height))).toBeGreaterThanOrEqual(44)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0)
+      // Nomes longos quebram entre palavras, nunca para fora do botão.
+      const clipped = await links.evaluateAll((buttons) =>
+        buttons.filter((button) => button.scrollWidth > button.clientWidth).map((button) => button.textContent),
+      )
+      expect(clipped).toEqual([])
+    })
+  }
+
   test('o índice fica recolhido e leva até a seção, que para logo abaixo do cabeçalho', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 })
     await createResume(page)

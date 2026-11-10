@@ -438,6 +438,14 @@ describe('índice de seções', () => {
     expect(within(index()).getByRole('button', { name: /^Experiência/ })).toHaveTextContent('Preenchida')
   })
 
+  it('o estado de cada seção faz parte do nome acessível; a barra acompanha a contagem', () => {
+    openSeeded()
+    expect(within(index()).getByRole('button', { name: 'Projetos Vazia' })).toBeInTheDocument()
+    expect(within(index()).getByRole('button', { name: 'Resumo Preenchida' })).toBeInTheDocument()
+    const fill = document.querySelector('summary [aria-hidden="true"] > span')
+    expect(parseFloat(fill.style.width)).toBeCloseTo((8 / 11) * 100, 2)
+  })
+
   it('seção vazia com erro não conta como preenchida e aparece como "Corrigir" após tentar o PDF', () => {
     const empty = { ...SAMPLE_RESUME.personal, name: '', title: '', email: '', phone: '', city: '', state: '', link: '' }
     renderEditor(`/editor/${seed({ ...SAMPLE_RESUME, personal: empty }).id}`)
