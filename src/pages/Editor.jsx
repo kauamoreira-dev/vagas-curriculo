@@ -11,13 +11,45 @@ import { Button } from '@/components/ui/Button'
 import { SAMPLE_RESUME, hasResumeContent } from '@/data/resume'
 import { TEMPLATES, getTemplate } from '@/data/templates'
 import { useResumeDraft } from '@/hooks/useResumeDraft'
+import { resumeStore } from '@/services/resumeStore'
 import { isInAppBrowser } from '@/utils/browser'
 import { splitBySeverity, validateResume } from '@/utils/validation'
 import styles from './Editor.module.css'
 
-// Rota /editor/:id? — escolhe o currículo e mostra a área de edição.
+/*
+ * Rota /editor/:id? — escolhe o currículo e mostra a área de edição.
+ * /editor?modelo=<id> (vindo da página inicial ou de /modelos) cria um currículo novo com o
+ * modelo escolhido: nunca troca o modelo de um currículo que já existe.
+ */
 export function Editor() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
+  const templateForNew = id ? null : searchParams.get('modelo')
+  if (templateForNew && getTemplate(templateForNew)) return <NewFromTemplate templateId={templateForNew} />
+  return <EditorRoute id={id} />
+}
+
+/*
+ * Grava um currículo novo e vazio com o modelo pedido e abre o editor nele. Se o navegador não
+ * deixar salvar, volta para "Meus currículos", que mostra o aviso (como em "Novo currículo").
+ */
+function NewFromTemplate({ templateId }) {
+  const navigate = useNavigate()
+  // No StrictMode o efeito roda duas vezes: o currículo é criado uma vez só.
+  const created = useRef(false)
+
+  useEffect(() => {
+    if (created.current) return
+    created.current = true
+    const saved = resumeStore.saveResume(resumeStore.newRecord({ templateId }))
+    if (saved) navigate(`/editor/${saved.id}`, { replace: true })
+    else navigate('/curriculos', { replace: true, state: { createFailed: true } })
+  }, [templateId, navigate])
+
+  return null
+}
+
+function EditorRoute({ id }) {
   const draft = useResumeDraft(id)
   const navigate = useNavigate()
   const location = useLocation()
@@ -173,7 +205,8 @@ function EditorWorkspace({ draft }) {
 
   function chooseTemplate(id) {
     setTemplateId(id)
-    setSearchParams({ modelo: id }, { replace: true })
+    // Num currículo ainda não salvo a URL é /editor, onde ?modelo= criaria um currículo novo.
+    if (draft.persisted) setSearchParams({ modelo: id }, { replace: true })
   }
 
   function handleTemplateKeys(event) {

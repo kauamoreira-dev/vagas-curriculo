@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { getTemplate } from '@/data/templates'
 import { useResumeList } from '@/hooks/useResumeList'
@@ -17,8 +17,12 @@ const STORAGE_ERROR = 'Não foi possível salvar neste navegador. Libere espaço
 export function Curriculos() {
   const { items, createResume, duplicateResume, deleteResume } = useResumeList()
   const navigate = useNavigate()
-  // Resultado da última ação, anunciado para leitores de tela.
-  const [status, setStatus] = useState({ text: '', error: false })
+  const location = useLocation()
+  // Resultado da última ação, anunciado para leitores de tela. Chega pronto quando o editor não
+  // conseguiu criar o currículo a partir de um modelo (/editor?modelo=…).
+  const [status, setStatus] = useState(() =>
+    location.state?.createFailed ? { text: STORAGE_ERROR, error: true } : { text: '', error: false },
+  )
 
   useEffect(() => {
     document.title = 'Meus currículos · Currículo Tapajós'

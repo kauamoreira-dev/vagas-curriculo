@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 
 // Nome do site em todos os lugares em que aparece; o símbolo da logo é o arquivo oficial, sem mudanças.
@@ -15,15 +16,50 @@ test('o nome do site aparece na aba, na logo e no rodapé', async ({ page }) => 
   await expect(page.locator('body')).not.toContainText('Vagas Currículo')
 })
 
-test('a logo continua sendo o arquivo oficial e carrega', async ({ page }) => {
+// Arquivo oficial da marca: não pode mudar. As páginas exibem cópias reduzidas dele.
+const OFFICIAL_LOGO = '/brand/logo-vagas-curriculo.png'
+const OFFICIAL_SHA256 = 'c77d17ba9a4cd0155eb34595ab0f916f470ead61b3b33b5cf1447129ac6cd880'
+
+test('o arquivo oficial da logo continua publicado, sem nenhuma alteração', async ({ request }) => {
+  const response = await request.get(OFFICIAL_LOGO)
+  expect(response.ok()).toBe(true)
+  expect(createHash('sha256').update(await response.body()).digest('hex')).toBe(OFFICIAL_SHA256)
+})
+
+test('a logo usa as cópias leves (72/144 px), nítidas para a densidade da tela', async ({ page }) => {
+  const logos = []
+  page.on('response', (response) => {
+    if (response.url().includes('/brand/')) logos.push(response)
+  })
   await page.goto('/')
-  const image = page.locator('img[src="/brand/logo-vagas-curriculo.png"]').first()
-  await expect(image).toBeAttached()
-  // Espera o download terminar: instantâneo localmente, mas o PNG oficial tem ~950 KB pela internet.
+  const image = page.locator('header img[src^="/brand/"]').first()
+  // Espera o download terminar: instantâneo localmente, mais lento pela internet.
   await expect
     .poll(() => image.evaluate((element) => element.complete && element.naturalWidth > 0), { timeout: 20_000 })
     .toBe(true)
-  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/brand/logo-vagas-curriculo.png')
+
+  const { currentSrc, naturalWidth, renderedWidth, dpr } = await image.evaluate((element) => ({
+    currentSrc: new URL(element.currentSrc).pathname,
+    naturalWidth: element.naturalWidth,
+    renderedWidth: element.getBoundingClientRect().width,
+    dpr: window.devicePixelRatio,
+  }))
+  expect(currentSrc).toBe(dpr > 1 ? '/brand/logo-vagas-curriculo-144.png' : '/brand/logo-vagas-curriculo-72.png')
+  // Nítida: o arquivo escolhido tem pelo menos os pixels físicos em que é desenhado (até 2×).
+  // (Com srcset por densidade, naturalWidth vem dividido pela densidade; por isso o tamanho do arquivo.)
+  const filePixels = currentSrc.endsWith('-144.png') ? 144 : 72
+  expect(naturalWidth).toBeGreaterThan(0)
+  expect(filePixels).toBeGreaterThanOrEqual(Math.ceil(renderedWidth * Math.min(dpr, 2)))
+
+  // O arquivo oficial (~1 MB) não é baixado pela página; o que se baixa é leve.
+  expect(logos.map((response) => new URL(response.url()).pathname)).not.toContain(OFFICIAL_LOGO)
+  for (const response of logos) expect((await response.body()).length).toBeLessThan(30_000)
+
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/brand/logo-vagas-curriculo-72.png')
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
+    'href',
+    '/brand/logo-vagas-curriculo-144.png',
+  )
 })
 
 for (const width of [320, 375]) {
