@@ -92,6 +92,14 @@ export function Summary({ summary, styles }) {
   )
 }
 
+/*
+ * Entradas curtas não se partem entre páginas (regra de impressão de cada modelo). Uma entrada
+ * longa saltaria inteira para a página seguinte e deixaria um vazio grande: essa pode se partir
+ * entre os tópicos, levando o cabeçalho com os primeiros.
+ */
+const LONG_ENTRY_LINES = 6
+const longEntry = (lines) => (lines.length > LONG_ENTRY_LINES ? true : undefined)
+
 function EntryHead({ title: rawTitle, org: rawOrg, period, styles }) {
   const title = rawTitle?.trim()
   const org = rawOrg?.trim()
@@ -115,7 +123,7 @@ export function ExperienceList({ experience, styles }) {
       {items.map((item) => {
         const bullets = splitLines(item.description)
         return (
-          <article key={item.id} className={styles.entry}>
+          <article key={item.id} className={styles.entry} data-long={longEntry(bullets)}>
             <EntryHead
               title={item.role}
               org={item.company}
@@ -223,7 +231,7 @@ export function ProjectList({ projects, styles }) {
         const lines = splitLines(item.description)
         const technologies = item.technologies.trim()
         return (
-          <article key={item.id} className={styles.entry}>
+          <article key={item.id} className={styles.entry} data-long={longEntry(lines)}>
             <EntryHead title={item.name} styles={styles} />
             {technologies ? <p className={styles.entryMeta}>{technologies}</p> : null}
             {lines.length === 1 ? <p className={styles.paragraph}>{lines[0]}</p> : null}

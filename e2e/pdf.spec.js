@@ -111,6 +111,26 @@ for (const template of TEMPLATES) {
       }
     })
 
+    test('currículo de 3 páginas: margens em todas e sem cabeçalho/rodapé do navegador', async ({ page }) => {
+      // Duas vezes o resumo longo e mais experiências com vários tópicos.
+      await page.getByRole('textbox', { name: 'Resumo profissional' }).fill(`${LONG_SUMMARY} ${LONG_SUMMARY}`)
+      const description = Array.from({ length: 8 }, (_, index) => `Resultado ${index + 1} com indicadores da área.`)
+      for (let count = 0; count < 3; count++) {
+        await page.getByRole('button', { name: 'Adicionar experiência' }).click()
+        const role = page.getByRole('textbox', { name: /^Cargo/ }).last()
+        await role.fill(`Cargo ${count + 1}`)
+        await page.getByRole('textbox', { name: 'Atividades e resultados' }).last().fill(description.join('\n'))
+      }
+      const pages = await printPdf(page)
+      expect(pages.length).toBeGreaterThanOrEqual(3)
+      expect(await printPdf(page, { displayHeaderFooter: true })).toEqual(pages)
+      for (const [index, content] of pages.entries()) {
+        const baselines = textBaselines(content)
+        expect(Math.min(...baselines), `topo da página ${index + 1}`).toBeGreaterThan(MARGIN)
+        expect(Math.max(...baselines), `pé da página ${index + 1}`).toBeLessThan(PAGE_HEIGHT - MARGIN)
+      }
+    })
+
     if (template === 'Moderno') {
       test('a coluna azul ocupa a altura toda de cada página', async ({ page }) => {
         await page.getByRole('textbox', { name: 'Resumo profissional' }).fill(LONG_SUMMARY)

@@ -231,6 +231,28 @@ describe.each(TEMPLATE_IDS)('seções novas no modelo %s', (templateId) => {
   })
 })
 
+describe('paginação', () => {
+  it.each(TEMPLATE_IDS)('%s: só entradas com mais de 6 tópicos podem se partir entre páginas', (templateId) => {
+    const [item] = SAMPLE_RESUME.experience
+    const lines = (count) => Array.from({ length: count }, (_, index) => `Tópico ${index + 1}`).join('\n')
+    renderResume(
+      {
+        ...SAMPLE_RESUME,
+        experience: [
+          { ...item, id: 'curta', description: lines(6) },
+          { ...item, id: 'longa', description: lines(7) },
+        ],
+        projects: [{ id: 'p', name: 'Projeto', description: lines(8), technologies: '', url: '' }],
+      },
+      templateId,
+    )
+    const [short, long] = within(sectionOf('Experiência')).getAllByRole('article')
+    expect(short).not.toHaveAttribute('data-long')
+    expect(long).toHaveAttribute('data-long', 'true')
+    expect(within(sectionOf('Projetos')).getByRole('article')).toHaveAttribute('data-long', 'true')
+  })
+})
+
 describe('conteúdo parcial', () => {
   it('omite experiências e formações só com datas ou só com espaços', () => {
     const empty = createEmptyResume()

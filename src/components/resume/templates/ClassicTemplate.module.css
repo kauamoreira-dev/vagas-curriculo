@@ -1,13 +1,25 @@
-/* Clássico: uma coluna, serifa nos títulos, separadores finos */
+/*
+ * Clássico: uma coluna, nome e títulos em serifa, réguas finas. Formal e sóbrio.
+ * Escala: nome 36 · título de seção 12.5 (versalete) · cargo 13.5 · texto 13 · apoio 11.5.
+ * Espaços: múltiplos de 4 — 24 entre seções, 14 entre itens.
+ */
 .page {
+  --navy: #0b2470;
+  --ink: #1f2633;
+  --text: #2f3846;
+  --muted: #5b6575;
+  --rule: #d9dee7;
+  --section-gap: 24px;
+  --entry-gap: 14px;
+
   width: 794px;
   min-height: 1123px;
-  padding: 64px 72px;
+  padding: 60px 72px;
   background: #fff;
-  color: #1d2433;
+  color: var(--text);
   font-family: var(--font-body);
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.5;
   /* E-mails, links e palavras longas quebram em vez de vazar da folha */
   overflow-wrap: anywhere;
 }
@@ -18,27 +30,29 @@
 
 .photo {
   display: block;
-  width: 104px;
-  height: 104px;
-  margin: 0 auto 18px;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 16px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 .name {
   font-family: var(--font-display);
-  font-size: 38px;
+  font-size: 36px;
   font-weight: 500;
   line-height: 1.1;
-  letter-spacing: -0.01em;
-  color: #0b2470;
+  letter-spacing: -0.005em;
+  color: var(--navy);
 }
 
 .title {
-  margin-top: 6px;
-  font-size: 14px;
-  letter-spacing: 0.04em;
-  color: #4a5568;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .placeholder {
@@ -49,19 +63,19 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 4px 0;
+  gap: 2px 0;
   margin: 14px 0 0;
-  padding: 0 0 22px;
+  padding: 0 0 20px;
   list-style: none;
-  font-size: 12px;
-  color: #4a5568;
-  border-bottom: 1px solid #0b2470;
+  font-size: 11.5px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--navy);
 }
 
 .contact li + li::before {
   content: '·';
   margin: 0 10px;
-  color: #9aa3b1;
+  color: #a3abb8;
 }
 
 /* Endereço completo em linha própria, abaixo dos demais contatos, sem separador solto */
@@ -76,99 +90,105 @@
 }
 
 .section {
-  padding-top: 22px;
+  padding-top: var(--section-gap);
 }
 
+/* Versalete serifado: hierarquia clara sem competir com o nome */
 .sectionTitle {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   padding-bottom: 6px;
   font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 500;
-  color: #0b2470;
-  border-bottom: 1px solid #dfe3ea;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--navy);
+  border-bottom: 1px solid var(--rule);
 }
 
 .sectionBody {
   display: grid;
-  gap: 14px;
+  gap: var(--entry-gap);
 }
 
 .paragraph {
-  color: #2d3748;
+  color: var(--text);
 }
 
 .entry {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
+/* Cargo e instituição à esquerda, datas alinhadas à direita na mesma linha de base */
 .entryHead {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
-  gap: 16px;
+  gap: 0 16px;
 }
 
+/* O título cede espaço às datas até 60% da linha; datas mais longas descem para a linha seguinte */
 .entryTitle {
+  flex: 1 1 0;
+  min-width: 60%;
   font-size: 13.5px;
   font-weight: 600;
-  color: #1d2433;
+  line-height: 1.4;
+  color: var(--ink);
 }
 
 .entrySep {
-  color: #9aa3b1;
   font-weight: 400;
+  color: #a3abb8;
 }
 
+/* Instituição em itálico serifado, no mesmo corpo visual do cargo */
 .entryOrg {
-  font-weight: 400;
-  font-style: italic;
   font-family: var(--font-display);
-  font-size: 14.5px;
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text);
 }
 
 .period {
   flex-shrink: 0;
-  font-size: 12px;
-  color: #5a6475;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.entryMeta {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.entryLink {
+  justify-self: start;
+  font-size: 11.5px;
+  color: var(--navy);
+  text-decoration: none;
 }
 
 .bullets {
-  margin: 0;
-  padding-left: 18px;
-  color: #2d3748;
+  margin: 2px 0 0;
+  padding-left: 16px;
+  color: var(--text);
+}
+
+.bullets li {
+  padding-left: 2px;
 }
 
 .bullets li + li {
   margin-top: 2px;
 }
 
-.skills {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  color: #2d3748;
-}
-
-.skills li + li::before {
-  content: '·';
-  margin: 0 8px;
-  color: #9aa3b1;
-}
-
-.entryMeta {
-  font-size: 12px;
-  color: #5a6475;
-}
-
-.entryLink {
-  justify-self: start;
-  font-size: 12px;
-  color: #0b2470;
-  text-decoration: none;
+.bullets li::marker {
+  color: #8a94a5;
 }
 
 .skillGroup {
@@ -177,40 +197,41 @@
 }
 
 .groupTitle {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  color: #4a5568;
+  color: var(--muted);
 }
 
+.skills,
 .languages {
   display: flex;
   flex-wrap: wrap;
   margin: 0;
   padding: 0;
   list-style: none;
-  color: #2d3748;
+  color: var(--text);
 }
 
+.skills li + li::before,
 .languages li + li::before {
   content: '·';
   margin: 0 8px;
-  color: #9aa3b1;
+  color: #a3abb8;
 }
 
 .languageName {
   font-weight: 600;
+  color: var(--ink);
 }
 
 .languageLevel::before {
   content: ' – ';
-  color: #9aa3b1;
+  color: #a3abb8;
 }
 
 /*
  * Impressão: a margem vertical de 14mm é o padding da folha, repetido em cada página
  * (box-decoration-break: clone). O @page fica sem margem — ver index.css.
- * Blocos não se partem entre páginas.
  */
 @media print {
   .page {
@@ -227,18 +248,35 @@
     }
   }
 
+  /* Foto e nome sempre na mesma página */
   .identity,
-  .entry {
+  .photo {
+    break-inside: avoid;
+    break-after: avoid;
+  }
+
+  /* Título de seção nunca sozinho no pé da página */
+  .sectionTitle {
+    break-after: avoid;
+  }
+
+  /* Itens curtos inteiros; longos se partem entre tópicos, com o cabeçalho junto dos primeiros */
+  .entry,
+  .skillGroup {
     break-inside: avoid;
   }
 
-  /* Foto e nome sempre na mesma página */
-  .photo {
+  .entry[data-long] {
+    break-inside: auto;
+  }
+
+  .entryHead {
+    break-inside: avoid;
     break-after: avoid;
   }
 
-  .sectionTitle {
-    break-after: avoid;
+  .bullets li {
+    break-inside: avoid;
   }
 
   .paragraph {

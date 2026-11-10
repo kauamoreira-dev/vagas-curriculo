@@ -1,28 +1,37 @@
-/* Essencial: rótulos à esquerda, conteúdo à direita, sem cor */
+/*
+ * Essencial: sem cor, rótulos em mono à esquerda e conteúdo à direita. Direto e fácil de escanear.
+ * Escala: nome 32 · cargo 13.5 · texto 13 · apoio 11 (mono) · rótulos 10.5 (mono, caixa alta).
+ * Espaços: múltiplos de 4 — cada seção é uma linha com 16 de respiro e fio fino entre elas.
+ */
 .page {
+  --ink: #141414;
+  --text: #2a2a2a;
+  --muted: #5c5c5c;
+  --rule: #e2e2e2;
+  --label-width: 136px;
+
   width: 794px;
   min-height: 1123px;
-  padding: 60px 64px;
+  padding: 56px 64px;
   background: #fff;
-  color: #1a1a1a;
+  color: var(--text);
   font-family: var(--font-body);
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.5;
   /* E-mails, links e palavras longas quebram em vez de vazar da folha */
   overflow-wrap: anywhere;
 }
 
 .top {
   display: grid;
-  gap: 14px;
-  padding-bottom: 24px;
-  margin-bottom: 4px;
-  border-bottom: 2px solid #1a1a1a;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--ink);
 }
 
 .identity {
   display: grid;
-  gap: 2px;
+  gap: 4px;
 }
 
 /* Com foto, nome e contato ficam à esquerda e a foto à direita */
@@ -35,21 +44,22 @@
   grid-column: 2;
   grid-row: 1 / span 2;
   align-self: center;
-  width: 96px;
-  height: 96px;
+  width: 92px;
+  height: 92px;
   object-fit: cover;
 }
 
 .name {
-  font-size: 34px;
+  font-size: 32px;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.025em;
+  color: var(--ink);
 }
 
 .title {
-  font-size: 15px;
-  color: #555;
+  font-size: 14px;
+  color: var(--muted);
 }
 
 .placeholder {
@@ -59,22 +69,24 @@
 .contact {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 18px;
+  gap: 2px 20px;
   margin: 0;
   padding: 0;
   list-style: none;
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 11px;
+  line-height: 1.6;
   color: #444;
 }
 
+/* Rótulo e primeiro item na mesma linha, alinhados pela linha de base do texto */
 .section {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  align-items: start;
-  gap: 14px 24px;
-  padding: 18px 0;
-  border-bottom: 1px solid #e4e4e4;
+  grid-template-columns: var(--label-width) minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px 24px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--rule);
 }
 
 .section:last-child {
@@ -84,13 +96,13 @@
 .sectionTitle {
   grid-column: 1;
   grid-row: 1;
-  padding-top: 2px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 500;
-  letter-spacing: 0.1em;
+  line-height: 1.5;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #666;
+  color: var(--muted);
 }
 
 /* Cada item vira uma linha do grid; o título divide a 1ª linha com o 1º item. */
@@ -103,7 +115,7 @@
 }
 
 .paragraph {
-  color: #2a2a2a;
+  color: var(--text);
 }
 
 .entry {
@@ -113,60 +125,68 @@
 
 .entryHead {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
-  gap: 16px;
+  gap: 0 16px;
 }
 
+/* O título cede espaço às datas até 60% da linha; datas mais longas descem para a linha seguinte */
 .entryTitle {
+  flex: 1 1 0;
+  min-width: 60%;
   font-size: 13.5px;
   font-weight: 600;
+  line-height: 1.4;
+  color: var(--ink);
 }
 
 .entrySep {
-  color: #999;
   font-weight: 400;
+  color: #9a9a9a;
 }
 
 .entryOrg {
   font-weight: 400;
-  color: #444;
+  color: var(--muted);
+}
+
+.period,
+.entryMeta,
+.entryLink {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
 }
 
 .period {
   flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: #666;
-}
-
-.bullets {
-  margin: 0;
-  padding-left: 16px;
-  color: #2a2a2a;
-}
-
-.skills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.entryMeta {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: #666;
+  white-space: nowrap;
 }
 
 .entryLink {
   justify-self: start;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: #444;
+  color: #333;
   text-decoration: none;
+}
+
+.bullets {
+  margin: 2px 0 0;
+  padding-left: 16px;
+  color: var(--text);
+}
+
+.bullets li {
+  padding-left: 2px;
+}
+
+.bullets li + li {
+  margin-top: 1px;
+}
+
+.bullets li::marker {
+  color: #8c8c8c;
 }
 
 .skillGroup {
@@ -175,15 +195,16 @@
 }
 
 .groupTitle {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  color: #555;
+  color: var(--muted);
 }
 
+.skills,
 .languages {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 20px;
+  gap: 2px 18px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -191,18 +212,19 @@
 
 .languageName {
   font-weight: 600;
+  color: var(--ink);
 }
 
 .languageLevel {
   margin-left: 6px;
-  color: #555;
+  color: var(--muted);
 }
 
 /*
  * Impressão: a margem vertical de 14mm é o padding da folha, repetido em cada página
  * (box-decoration-break: clone). O @page fica sem margem — ver index.css.
- * Blocos não se partem entre páginas. Como título e 1º item estão na mesma linha do grid
- * e o item não se parte, os dois vão juntos para a próxima página quando não cabem.
+ * Como rótulo e 1º item estão na mesma linha do grid e o item não se parte,
+ * os dois vão juntos para a próxima página quando não cabem.
  */
 @media print {
   .page {
@@ -219,8 +241,26 @@
     }
   }
 
-  .top,
-  .entry {
+  .top {
+    break-inside: avoid;
+  }
+
+  /* Itens curtos inteiros; longos se partem entre tópicos, com o cabeçalho junto dos primeiros */
+  .entry,
+  .skillGroup {
+    break-inside: avoid;
+  }
+
+  .entry[data-long] {
+    break-inside: auto;
+  }
+
+  .entryHead {
+    break-inside: avoid;
+    break-after: avoid;
+  }
+
+  .bullets li {
     break-inside: avoid;
   }
 
