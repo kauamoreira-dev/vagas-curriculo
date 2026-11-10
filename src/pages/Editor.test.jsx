@@ -175,25 +175,55 @@ describe('abas Editar e Visualizar', () => {
   })
 })
 
-describe('pré-visualização em tamanho real', () => {
-  it('alterna entre ajustada à tela e tamanho real, com rolagem lateral só na folha', () => {
+describe('zoom da prévia', () => {
+  it('alterna entre página inteira e tamanho real, com rolagem lateral só na folha', () => {
     const { container } = renderEditor(`/editor/${seed().id}`)
-    const toggle = screen.getByRole('button', { name: 'Ver em tamanho real' })
+    const option = (name) => within(screen.getByRole('radiogroup', { name: 'Zoom da prévia' })).getByRole('radio', { name })
     const scroller = container.querySelector('[data-actual-size]')
     const sheet = () => scroller.querySelector('[style*="scale"]')
 
-    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    expect(option('Página inteira')).toHaveAttribute('aria-checked', 'true')
     expect(scroller).toHaveAttribute('data-actual-size', 'false')
 
-    fireEvent.click(toggle)
-    expect(toggle).toHaveAttribute('aria-pressed', 'true')
-    expect(toggle).toHaveTextContent('Ajustar à tela')
+    fireEvent.click(option('Tamanho real'))
+    expect(option('Tamanho real')).toHaveAttribute('aria-checked', 'true')
+    expect(option('Página inteira')).toHaveAttribute('aria-checked', 'false')
     expect(scroller).toHaveAttribute('data-actual-size', 'true')
     expect(sheet()).toHaveStyle({ transform: 'scale(1)', visibility: 'visible' })
     expect(sheet().parentElement).toHaveStyle({ width: '794px' })
 
-    fireEvent.click(toggle)
-    expect(screen.getByRole('button', { name: 'Ver em tamanho real' })).toHaveAttribute('aria-pressed', 'false')
+    // Setas do teclado também trocam o modo.
+    fireEvent.keyDown(option('Tamanho real'), { key: 'ArrowLeft' })
+    expect(option('Página inteira')).toHaveAttribute('aria-checked', 'true')
+    expect(option('Página inteira')).toHaveFocus()
+  })
+
+  it('o modo escolhido continua ao voltar da aba Editar, e os dados e o modelo se mantêm', () => {
+    openSeeded()
+    fireEvent.click(screen.getByRole('tab', { name: 'Visualizar' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Tamanho real' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Moderno' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Editar' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Visualizar' }))
+    expect(screen.getByRole('radio', { name: 'Tamanho real' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Moderno' })).toHaveAttribute('aria-checked', 'true')
+    expect(within(printArea()).getByRole('heading', { level: 1 })).toHaveTextContent('Marina Albuquerque')
+  })
+})
+
+describe('orientação para salvar o PDF', () => {
+  const userAgent = (value) => vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(value)
+
+  it.each([
+    ['Android', 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36', '“Salvar como PDF”'],
+    ['iPhone', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Version/17.5 Mobile/15E148 Safari/604.1', '“Salvar em Arquivos”'],
+    ['computador', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36', 'como destino'],
+  ])('%s: explica em uma linha onde salvar, sem prometer download direto', (_, ua, expected) => {
+    userAgent(ua)
+    openSeeded()
+    const note = screen.getByText(/Para salvar:/)
+    expect(note).toHaveTextContent(expected)
+    expect(note.textContent).not.toMatch(/baixar|download/i)
   })
 })
 

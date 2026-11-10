@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isInAppBrowser } from './browser'
+import { isInAppBrowser, printPlatform } from './browser'
 
 const UA = {
   instagramIos:
@@ -41,5 +41,27 @@ describe('isInAppBrowser', () => {
 
   it.each([undefined, null, ''])('trata %j como navegador comum', (userAgent) => {
     expect(isInAppBrowser(userAgent)).toBe(false)
+  })
+})
+
+describe('printPlatform', () => {
+  const ipadDesktopMode =
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15'
+
+  it('iPhone (Safari ou app) e iPad, inclusive o iPad que se apresenta como Mac', () => {
+    expect(printPlatform(UA.safariIos)).toBe('ios')
+    expect(printPlatform(UA.instagramIos)).toBe('ios')
+    expect(printPlatform(ipadDesktopMode, 5)).toBe('ios')
+  })
+
+  it('Android: Chrome, Samsung Internet', () => {
+    expect(printPlatform(UA.chromeAndroid)).toBe('android')
+    expect(printPlatform(UA.samsungInternet)).toBe('android')
+  })
+
+  it('computador, inclusive Mac sem tela de toque', () => {
+    expect(printPlatform(UA.chromeDesktop)).toBe('desktop')
+    expect(printPlatform(ipadDesktopMode, 0)).toBe('desktop')
+    expect(printPlatform(undefined)).toBe('desktop')
   })
 })

@@ -31,7 +31,7 @@ test.describe('celular', () => {
       await page.getByRole('tab', { name: 'Visualizar' }).click()
       expect(await horizontalOverflow(page)).toBe(0)
 
-      await page.getByRole('button', { name: 'Ver em tamanho real' }).click()
+      await page.getByRole('radio', { name: 'Tamanho real' }).click()
       expect(await horizontalOverflow(page)).toBe(0)
       // A rolagem lateral fica dentro da área da folha.
       const scroller = page.locator('[data-actual-size="true"]')

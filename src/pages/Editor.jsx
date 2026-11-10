@@ -7,12 +7,13 @@ import { TextField } from '@/components/editor/fields'
 import { Logo } from '@/components/layout/Logo'
 import { ResumeDocument } from '@/components/resume/ResumeDocument'
 import { ScaledSheet } from '@/components/resume/ScaledSheet'
+import { contentLeft, estimatePages, formatPageEstimate, measureContentHeight } from '@/components/resume/pageEstimate'
 import { Button } from '@/components/ui/Button'
 import { SAMPLE_RESUME, hasResumeContent } from '@/data/resume'
 import { TEMPLATES, getTemplate } from '@/data/templates'
 import { useResumeDraft } from '@/hooks/useResumeDraft'
 import { resumeStore } from '@/services/resumeStore'
-import { isInAppBrowser } from '@/utils/browser'
+import { isInAppBrowser, printPlatform } from '@/utils/browser'
 import { splitBySeverity, validateResume } from '@/utils/validation'
 import styles from './Editor.module.css'
 
@@ -144,6 +145,22 @@ function SaveIndicator({ status, savedAt, onRetry }) {
 
 const VIEWS = ['form', 'preview']
 
+// Modos de zoom da prévia: a folha inteira na largura da tela ou em tamanho real (rola de lado).
+const ZOOMS = [
+  ['fit', 'Página inteira'],
+  ['actual', 'Tamanho real'],
+]
+
+/*
+ * Como salvar o PDF a partir do diálogo de impressão de cada navegador. O site não baixa o
+ * arquivo direto: quem salva é o navegador, por isso a orientação é só o passo que muda.
+ */
+const PDF_HINTS = {
+  android: 'Para salvar: toque em PDF e, como impressora, escolha “Salvar como PDF”.',
+  ios: 'Para salvar: toque em PDF e, na tela de impressão, use Compartilhar › “Salvar em Arquivos”.',
+  desktop: 'Para salvar: clique em Salvar PDF e, como destino, escolha “Salvar como PDF”.',
+}
+
 // Setas, Home e End movem entre opções de um grupo (abas, modelos): devolve o índice do próximo.
 function nextIndexForKey(key, current, total) {
   if (key === 'Home') return 0
@@ -159,9 +176,16 @@ function EditorWorkspace({ draft }) {
   const [view, setView] = useState('form')
   // No celular as duas abas rolam a mesma página: cada uma volta para onde a pessoa estava.
   const scrollByView = useRef({ form: 0, preview: 0 })
-  // Reduzida, a folha cabe na tela mas o texto fica ilegível no celular; em tamanho real, rola de lado.
-  const [actualSize, setActualSize] = useState(false)
+  // Reduzida ('fit'), a folha cabe na tela mas o texto fica pequeno no celular; em tamanho real
+  // ('actual'), fica legível e rola de lado dentro da área da folha.
+  const [zoom, setZoom] = useState('fit')
+  const actualSize = zoom === 'actual'
   const [inAppBrowser] = useState(() => isInAppBrowser(navigator.userAgent))
+  const [pdfHint] = useState(() => PDF_HINTS[printPlatform(navigator.userAgent, navigator.maxTouchPoints)])
+  // Páginas aproximadas do PDF, medidas na prévia (ver pageEstimate.js).
+  const documentRef = useRef(null)
+  const scrollerRef = useRef(null)
+  const [pageEstimate, setPageEstimate] = useState(null)
   const [showAllErrors, setShowAllErrors] = useState(false)
   // Incrementado a cada "Salvar PDF" com pendências: o formulário abre os grupos onde elas estão.
   const [revealErrors, setRevealErrors] = useState(0)
@@ -195,6 +219,22 @@ function EditorWorkspace({ draft }) {
     window.scrollTo(0, scrollByView.current[view])
   }, [view])
 
+  // Remede a cada mudança no conteúdo, no modelo ou na aba, e de novo quando as fontes carregam
+  // (elas mudam a quebra das linhas). Fora da aba Visualizar no celular a folha está oculta: mantém a anterior.
+  useEffect(() => {
+    const done = new AbortController()
+    const measure = () => {
+      const height = measureContentHeight(documentRef.current)
+      if (!done.signal.aborted && height !== null) setPageEstimate(estimatePages(height))
+    }
+    const frame = requestAnimationFrame(measure)
+    document.fonts?.ready.then(() => requestAnimationFrame(measure))
+    return () => {
+      done.abort()
+      cancelAnimationFrame(frame)
+    }
+  }, [resume, templateId, view, zoom])
+
   function handleTabKeys(event) {
     const next = nextIndexForKey(event.key, VIEWS.indexOf(view), VIEWS.length)
     if (next === null) return
@@ -207,6 +247,26 @@ function EditorWorkspace({ draft }) {
     setTemplateId(id)
     // Num currículo ainda não salvo a URL é /editor, onde ?modelo= criaria um currículo novo.
     if (draft.persisted) setSearchParams({ modelo: id }, { replace: true })
+  }
+
+  function chooseZoom(next) {
+    setZoom(next)
+    if (next !== 'actual') return
+    // Em tamanho real, começa na coluna de texto (e não na margem branca da folha).
+    requestAnimationFrame(() => {
+      const scroller = scrollerRef.current
+      const left = documentRef.current && contentLeft(documentRef.current)
+      if (scroller && left !== null) scroller.scrollLeft = Math.max(0, left - 16)
+    })
+  }
+
+  function handleZoomKeys(event) {
+    const current = ZOOMS.findIndex(([value]) => value === zoom)
+    const next = nextIndexForKey(event.key, current, ZOOMS.length)
+    if (next === null) return
+    event.preventDefault()
+    chooseZoom(ZOOMS[next][0])
+    document.getElementById(`zoom-${ZOOMS[next][0]}`)?.focus()
   }
 
   function handleTemplateKeys(event) {
@@ -405,22 +465,35 @@ function EditorWorkspace({ draft }) {
         >
           <div className={styles.previewInner}>
             <div className={styles.previewToolbar}>
-              <Button
-                variant="secondary"
-                size="sm"
-                aria-pressed={actualSize}
-                onClick={() => setActualSize((current) => !current)}
-              >
-                {actualSize ? 'Ajustar à tela' : 'Ver em tamanho real'}
-              </Button>
+              <p className={styles.pageEstimate} title="O número exato aparece na tela de impressão.">
+                {pageEstimate ? formatPageEstimate(pageEstimate) : null}
+              </p>
+              <div className={styles.zoom} role="radiogroup" aria-label="Zoom da prévia" onKeyDown={handleZoomKeys}>
+                {ZOOMS.map(([value, label]) => (
+                  <button
+                    key={value}
+                    id={`zoom-${value}`}
+                    type="button"
+                    role="radio"
+                    aria-checked={zoom === value}
+                    tabIndex={zoom === value ? 0 : -1}
+                    className={styles.zoomOption}
+                    onClick={() => chooseZoom(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className={styles.sheetScroller} data-actual-size={actualSize}>
+            <div ref={scrollerRef} className={styles.sheetScroller} data-actual-size={actualSize}>
               <ScaledSheet className={styles.sheet} actualSize={actualSize}>
-                <ResumeDocument templateId={templateId} resume={resume} />
+                <div ref={documentRef}>
+                  <ResumeDocument templateId={templateId} resume={resume} />
+                </div>
               </ScaledSheet>
             </div>
             <p className={styles.previewNote}>
-              Pré-visualização em A4. Se o conteúdo passar de uma página, o PDF terá mais de uma.
+              Prévia em A4; a quebra exata das páginas aparece na impressão. {pdfHint}
             </p>
           </div>
         </div>
