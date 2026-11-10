@@ -1,6 +1,6 @@
 .app {
   /* Altura do cabeçalho fixo na aba Editar: os campos focados param logo abaixo dele */
-  --editor-sticky: 132px;
+  --editor-sticky: 80px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -26,16 +26,37 @@
   }
 }
 
+/*
+ * Celular: uma linha só (símbolo da marca, abas Editar/Visualizar e PDF), para o cabeçalho fixo
+ * ocupar pouco com o teclado aberto. Na aba Visualizar, o seletor de modelo entra numa 2ª linha.
+ */
 .topbar {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   grid-template-areas:
-    'brand actions'
-    'picker picker';
+    'brand tabs actions'
+    'picker picker picker';
   align-items: center;
-  gap: 12px 16px;
-  padding: 12px var(--gutter);
+  gap: 10px;
+  padding: 10px var(--gutter);
   border-bottom: 1px solid var(--gray-200);
+}
+
+/* No celular a marca fica só com o símbolo; o nome volta a partir de 640px */
+.brand a > span:nth-child(2) {
+  display: none;
+}
+
+/* Parte do rótulo escondida em telas muito estreitas, mas lida por leitores de tela */
+@media (max-width: 399.98px) {
+  .narrowHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 
 .brand {
@@ -118,26 +139,43 @@
   display: none;
 }
 
-/* ---------- Abas (celular) ---------- */
+/* ---------- Abas Editar/Visualizar (celular e tablet): controle segmentado ---------- */
 .viewTabs {
+  grid-area: tabs;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid var(--gray-200);
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--gray-100);
 }
 
 .viewTab {
-  height: 44px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 8px;
   border: 0;
-  border-bottom: 2px solid transparent;
+  border-radius: 4px;
   background: transparent;
+  font-size: var(--text-sm);
   font-weight: 600;
   color: var(--gray-500);
   cursor: pointer;
 }
 
+.viewTab:hover {
+  color: var(--ink);
+}
+
 .viewTab[aria-selected='true'] {
-  color: var(--blue-700);
-  border-bottom-color: var(--blue-700);
+  background: var(--paper);
+  color: var(--blue-900);
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.12);
+}
+
+@media (pointer: coarse) {
+  .viewTab {
+    height: 44px;
+  }
 }
 
 /* ---------- Área de trabalho ---------- */
@@ -163,17 +201,61 @@
   padding: 20px var(--gutter) 48px;
 }
 
+/* Estado do salvamento neste navegador: uma linha discreta com um ponto de cor */
 .saveStatus {
-  margin-bottom: 8px;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--blue-50);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  margin-bottom: 12px;
   font-size: var(--text-xs);
-  color: var(--blue-900);
+  color: var(--gray-500);
 }
 
-.saveStatus[data-warning='true'] {
-  background: #fdecea;
+.saveDot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gray-300);
+}
+
+.saveStatus[data-status='saved'] .saveDot {
+  background: #12805c;
+}
+
+.saveStatus[data-status='pending'] .saveDot {
+  background: var(--blue-600);
+  animation: saving 1s ease-in-out infinite alternate;
+}
+
+@keyframes saving {
+  to {
+    opacity: 0.3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saveStatus[data-status='pending'] .saveDot {
+    animation: none;
+  }
+}
+
+.saveError {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--gray-200);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+}
+
+.saveError strong {
   color: var(--danger);
 }
 
@@ -193,15 +275,25 @@
   color: #4d3200;
 }
 
-.mobileActions {
-  display: flex;
-  gap: 8px;
-  margin-top: 24px;
+/* Fim do formulário: nome na lista e ações gerais (no celular, Usar exemplo e Limpar ficam aqui) */
+.settings {
+  display: grid;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--gray-200);
 }
 
-.titleField {
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--gray-200);
+.settingsTitle {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.mobileActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 /* Currículo inexistente (/editor/:id com id desconhecido) */
@@ -283,7 +375,7 @@
  */
 @media (max-width: 1023.98px) {
   .app[data-view='form'] .topbar {
-    grid-template-areas: 'brand actions';
+    grid-template-areas: 'brand tabs actions';
   }
 
   .app[data-view='form'] .templatePicker {
@@ -291,7 +383,32 @@
   }
 }
 
+/* Tablet: marca com nome e ações na 1ª linha; modelo (aba Visualizar) e abas abaixo */
 @media (min-width: 640px) {
+  .app {
+    --editor-sticky: 132px;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'brand actions'
+      'picker picker'
+      'tabs tabs';
+    gap: 12px 16px;
+    padding-block: 12px;
+  }
+
+  .app[data-view='form'] .topbar {
+    grid-template-areas:
+      'brand actions'
+      'tabs tabs';
+  }
+
+  .brand a > span:nth-child(2) {
+    display: inline;
+  }
+
   .actions > :not(:last-child) {
     display: inline-flex;
   }
@@ -315,7 +432,8 @@
     overflow: hidden;
   }
 
-  .topbar {
+  .topbar,
+  .app[data-view='form'] .topbar {
     grid-template-columns: 1fr auto 1fr;
     grid-template-areas: 'brand picker actions';
     height: 64px;

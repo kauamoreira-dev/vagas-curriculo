@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  errorSeverity,
   formatPhone,
   formatZip,
   normalizeLine,
   normalizeMultiline,
   parseResumeDate,
+  splitBySeverity,
   validateEmail,
   validatePeriod,
   validateCertificationDates,
@@ -320,5 +322,40 @@ describe('validateResume — seções novas e endereço', () => {
       'projects.p1.name',
       'projects.p1.url',
     ])
+  })
+})
+
+describe('gravidade das pendências', () => {
+  it.each([
+    ['personal.name', 'error'],
+    ['personal.email', 'error'],
+    ['personal.zip', 'error'],
+    ['experience.e1.start', 'error'],
+    ['certifications.c1.url', 'error'],
+    ['courses.k1.hours', 'error'],
+    ['courses.k1.year', 'error'],
+    ['experience.e1.role', 'warning'],
+    ['experience.e1.company', 'warning'],
+    ['education.f1.institution', 'warning'],
+    ['certifications.c1.name', 'warning'],
+    ['languages.l1.language', 'warning'],
+    ['projects.p1.name', 'warning'],
+  ])('%s é %s', (key, severity) => {
+    expect(errorSeverity(key)).toBe(severity)
+  })
+
+  it('separa erros e avisos de validateResume mantendo a ordem', () => {
+    const errors = validateResume(
+      {
+        personal: { name: '', email: 'ana@', phone: '' },
+        experience: [{ id: 'e1', role: 'Analista', company: '', start: '2030', end: '', description: '' }],
+        education: [],
+      },
+      { today },
+    )
+    expect(splitBySeverity(errors)).toEqual({
+      blocking: ['personal.name', 'personal.email', 'experience.e1.start'],
+      warnings: ['experience.e1.company'],
+    })
   })
 })

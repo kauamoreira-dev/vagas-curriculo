@@ -17,6 +17,7 @@ function caretAfterDigits(text, digits) {
 /**
  * Campo de texto do formulário.
  * - `error`: mensagem exibida abaixo do campo (quem chama decide quando mostrar).
+ * - `tone`: 'error' (padrão; o campo fica inválido) ou 'warning' (aviso que pode ser ignorado).
  * - `mask`: função que formata o valor enquanto a pessoa digita (ex.: telefone).
  * - Ao sair do campo, espaços nas pontas e repetidos são removidos.
  */
@@ -27,6 +28,7 @@ export function TextField({
   onBlur,
   hint,
   error,
+  tone = 'error',
   required = false,
   mask,
   multiline = false,
@@ -92,13 +94,18 @@ export function TextField({
         onChange={handleChange}
         onBlur={handleBlur}
         aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
-        aria-invalid={error ? true : undefined}
+        aria-invalid={error && tone === 'error' ? true : undefined}
+        data-tone={error ? tone : undefined}
         aria-required={required || undefined}
         rows={multiline ? rows : undefined}
         {...props}
       />
       {error ? (
-        <p id={errorId} className={styles.error} role="alert">
+        <p
+          id={errorId}
+          className={tone === 'warning' ? styles.warning : styles.error}
+          role={tone === 'warning' ? undefined : 'alert'}
+        >
           {error}
         </p>
       ) : null}
@@ -113,9 +120,22 @@ export function TextField({
 
 /**
  * Seção do formulário. Com `onToggle`, vira um grupo expansível: o título é o botão que abre e
- * fecha, e `status` (ex.: "2 itens", "Revisar") aparece ao lado dele mesmo com o grupo fechado.
+ * fecha, e `status` (ex.: "2 itens", "Corrigir") aparece ao lado dele mesmo com o grupo fechado.
+ * `statusTone`: 'error' ou 'warning' destaca o status. `badge`: nível da seção (ex.: "Opcional").
  */
-export function FormSection({ id, title, description, children, action, open = true, onToggle, status, alert }) {
+export function FormSection({
+  id,
+  title,
+  description,
+  children,
+  action,
+  open = true,
+  onToggle,
+  status,
+  statusTone,
+  badge,
+  notice,
+}) {
   const bodyId = `${id}-conteudo`
   const collapsible = Boolean(onToggle)
   return (
@@ -132,6 +152,8 @@ export function FormSection({ id, title, description, children, action, open = t
                 onClick={onToggle}
               >
                 <span>{title}</span>
+                {/* Espaço entre título e selo: o nome do botão fica "Idiomas Opcional", não "IdiomasOpcional" */}
+                {badge ? <> <span className={styles.badge}>{badge}</span></> : null}
                 <span className={styles.chevron} aria-hidden="true" />
               </button>
             ) : (
@@ -139,7 +161,7 @@ export function FormSection({ id, title, description, children, action, open = t
             )}
           </h2>
           {status ? (
-            <span className={styles.sectionStatus} data-alert={alert || undefined}>
+            <span className={styles.sectionStatus} data-tone={statusTone}>
               {status}
             </span>
           ) : null}
@@ -147,6 +169,7 @@ export function FormSection({ id, title, description, children, action, open = t
         {description && open ? <p className={styles.sectionDescription}>{description}</p> : null}
       </div>
       <div id={bodyId} className={styles.sectionContent} hidden={!open}>
+        {notice}
         <div className={styles.sectionBody}>{children}</div>
         {action ? <div className={styles.sectionAction}>{action}</div> : null}
       </div>
@@ -298,6 +321,21 @@ export function FieldRow({ children }) {
   return <div className={styles.row}>{children}</div>
 }
 
+function Chevron({ direction }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path
+        d={direction === 'up' ? 'M3.5 10 8 5.5l4.5 4.5' : 'M3.5 6 8 10.5 12.5 6'}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export function RepeatableItem({ title, index, total, onMoveUp, onMoveDown, onRemove, children }) {
   return (
     <div className={styles.item}>
@@ -312,7 +350,7 @@ export function RepeatableItem({ title, index, total, onMoveUp, onMoveDown, onRe
             aria-label={`Mover “${title}” para cima`}
             title="Mover para cima"
           >
-            ↑
+            <Chevron direction="up" />
           </button>
           <button
             type="button"
@@ -322,7 +360,7 @@ export function RepeatableItem({ title, index, total, onMoveUp, onMoveDown, onRe
             aria-label={`Mover “${title}” para baixo`}
             title="Mover para baixo"
           >
-            ↓
+            <Chevron direction="down" />
           </button>
           <button
             type="button"

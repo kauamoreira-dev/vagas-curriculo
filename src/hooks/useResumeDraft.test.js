@@ -256,6 +256,106 @@ describe('falha de armazenamento (B8)', () => {
   })
 })
 
+describe('estado do salvamento', () => {
+  it('currículo novo: "unsaved"; alteração: "pending"; após gravar: "saved" com o horário', () => {
+    const { result } = renderDraft()
+    expect(result.current).toMatchObject({ saveStatus: 'unsaved', savedAt: null })
+
+    act(() => result.current.setPersonalField('name', 'Ana'))
+    expect(result.current.saveStatus).toBe('pending')
+    wait(SAVE_DELAY - 1)
+    expect(result.current.saveStatus).toBe('pending')
+    wait(1)
+    expect(result.current.saveStatus).toBe('saved')
+    // O horário é o da gravação confirmada no localStorage.
+    expect(result.current.savedAt).toBe(resumeStore.getResume(result.current.resumeId).updatedAt)
+  })
+
+  it('currículo já salvo abre como "saved", com o horário da última gravação', () => {
+    const record = seed()
+    const { result } = renderDraft(record.id)
+    expect(result.current).toMatchObject({ saveStatus: 'saved', savedAt: record.updatedAt })
+  })
+
+  it('falha: "error" até uma gravação dar certo; a alteração não se perde e "retrySave" tenta de novo', () => {
+    const record = seed()
+    const { result } = renderDraft(record.id)
+    failWrites()
+    act(() => result.current.setPersonalField('name', 'Ana'))
+    wait()
+    expect(result.current).toMatchObject({ saveStatus: 'error', storageAvailable: false })
+
+    // Outra edição com o armazenamento ainda falhando: o aviso continua (não volta a "salvando").
+    act(() => result.current.setPersonalField('title', 'Designer'))
+    expect(result.current.saveStatus).toBe('error')
+    wait()
+    expect(result.current.saveStatus).toBe('error')
+    expect(resumeStore.getResume(record.id).resume.personal.name).toBe('Marina Albuquerque')
+
+    failWrites(false)
+    act(() => result.current.retrySave())
+    expect(result.current).toMatchObject({ saveStatus: 'saved', storageAvailable: true })
+    expect(resumeStore.getResume(record.id).resume.personal).toMatchObject({ name: 'Ana', title: 'Designer' })
+  })
+
+  it('"retrySave" sem nada pendente não grava', () => {
+    const record = seed()
+    const { result } = renderDraft(record.id)
+    setItem.mockClear()
+    act(() => result.current.retrySave())
+    expect(resumeWrites()).toHaveLength(0)
+    expect(result.current.saveStatus).toBe('saved')
+  })
+})
+
+describe('desfazer remoção (restoreItem)', () => {
+  function openWithThreeJobs() {
+    const [job] = SAMPLE_RESUME.experience
+    const experience = ['a', 'b', 'c'].map((id) => ({ ...job, id, role: `Cargo ${id}` }))
+    const record = seed({ resume: { ...SAMPLE_RESUME, experience } })
+    return renderDraft(record.id)
+  }
+  const ids = (result) => result.current.resume.experience.map((item) => item.id)
+
+  it('devolve o item à posição original, com todos os dados', () => {
+    const { result } = openWithThreeJobs()
+    const removed = result.current.resume.experience[1]
+    act(() => result.current.removeItem('experience', 'b'))
+    expect(ids(result)).toEqual(['a', 'c'])
+
+    act(() => result.current.restoreItem('experience', removed, 1))
+    expect(ids(result)).toEqual(['a', 'b', 'c'])
+    expect(result.current.resume.experience[1]).toEqual(removed)
+    wait()
+    expect(resumeStore.getResume(result.current.resumeId).resume.experience[1]).toEqual(removed)
+  })
+
+  it('mantém as edições feitas depois da remoção', () => {
+    const { result } = openWithThreeJobs()
+    const removed = result.current.resume.experience[0]
+    act(() => result.current.removeItem('experience', 'a'))
+    act(() => result.current.updateItem('experience', 'c', 'company', 'Nova empresa'))
+    act(() => result.current.setField('summary', 'Resumo novo'))
+
+    act(() => result.current.restoreItem('experience', removed, 0))
+    expect(ids(result)).toEqual(['a', 'b', 'c'])
+    expect(result.current.resume.experience[2].company).toBe('Nova empresa')
+    expect(result.current.resume.summary).toBe('Resumo novo')
+  })
+
+  it('se a lista encolheu, devolve ao fim; não duplica se o item já voltou', () => {
+    const { result } = openWithThreeJobs()
+    const removed = result.current.resume.experience[2]
+    act(() => result.current.removeItem('experience', 'c'))
+    act(() => result.current.removeItem('experience', 'b'))
+    act(() => result.current.restoreItem('experience', removed, 2))
+    expect(ids(result)).toEqual(['a', 'c'])
+
+    act(() => result.current.restoreItem('experience', removed, 0))
+    expect(ids(result)).toEqual(['a', 'c'])
+  })
+})
+
 describe('ações (B10)', () => {
   function openSaved() {
     const record = seed({ templateId: 'classico' })

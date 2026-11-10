@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ResumeForm } from '@/components/editor/ResumeForm'
+import { SUMMARY_HEADING_ID } from '@/components/editor/ValidationSummary'
 import { TextField } from '@/components/editor/fields'
 import { Logo } from '@/components/layout/Logo'
 import { ResumeDocument } from '@/components/resume/ResumeDocument'
@@ -11,7 +12,7 @@ import { SAMPLE_RESUME, hasResumeContent } from '@/data/resume'
 import { TEMPLATES, getTemplate } from '@/data/templates'
 import { useResumeDraft } from '@/hooks/useResumeDraft'
 import { isInAppBrowser } from '@/utils/browser'
-import { validateResume } from '@/utils/validation'
+import { splitBySeverity, validateResume } from '@/utils/validation'
 import styles from './Editor.module.css'
 
 // Rota /editor/:id? — escolhe o currículo e mostra a área de edição.
@@ -67,6 +68,59 @@ function printResume(resume) {
   window.print()
 }
 
+// Horário da última gravação: "às 14:32" (hoje) ou "em 05/11/2026".
+function formatSavedAt(iso) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const today = new Date()
+  if (date.toDateString() === today.toDateString()) {
+    return `às ${date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+  }
+  return `em ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}`
+}
+
+/**
+ * Estado real da gravação neste navegador (localStorage), vindo de `useResumeDraft`.
+ * "Salvo" só aparece depois que o navegador aceitou a gravação. Não há nuvem: o texto diz onde está.
+ */
+function SaveIndicator({ status, savedAt, onRetry }) {
+  if (status === 'error') {
+    return (
+      <div className={styles.saveError} role="alert">
+        <p>
+          <strong>Não foi possível salvar neste navegador.</strong> O espaço pode estar cheio ou o
+          armazenamento bloqueado. Salve em PDF antes de sair para não perder as últimas alterações.
+        </p>
+        <Button variant="secondary" size="sm" onClick={onRetry}>
+          Tentar de novo
+        </Button>
+      </div>
+    )
+  }
+  const text = {
+    unsaved: 'Ainda não salvo. O salvamento começa quando você editar.',
+    pending: 'Salvando neste navegador…',
+    saved: `Salvo neste navegador ${formatSavedAt(savedAt)}`.trim(),
+  }[status]
+  return (
+    <p className={styles.saveStatus} data-status={status}>
+      <span className={styles.saveDot} aria-hidden="true" />
+      {text}
+    </p>
+  )
+}
+
+const VIEWS = ['form', 'preview']
+
+// Setas, Home e End movem entre opções de um grupo (abas, modelos): devolve o índice do próximo.
+function nextIndexForKey(key, current, total) {
+  if (key === 'Home') return 0
+  if (key === 'End') return total - 1
+  if (key === 'ArrowRight' || key === 'ArrowDown') return (current + 1) % total
+  if (key === 'ArrowLeft' || key === 'ArrowUp') return (current - 1 + total) % total
+  return null
+}
+
 function EditorWorkspace({ draft }) {
   const { resume, templateId, setTemplateId } = draft
   const [searchParams, setSearchParams] = useSearchParams()
@@ -79,6 +133,8 @@ function EditorWorkspace({ draft }) {
   const [showAllErrors, setShowAllErrors] = useState(false)
   // Incrementado a cada "Salvar PDF" com pendências: o formulário abre os grupos onde elas estão.
   const [revealErrors, setRevealErrors] = useState(0)
+  // Resumo de pendências no topo do formulário, aberto por "Salvar PDF".
+  const [summaryOpen, setSummaryOpen] = useState(false)
   // Trocar a chave recria o formulário e zera os campos marcados como visitados.
   const [formKey, setFormKey] = useState(0)
   const errors = useMemo(() => validateResume(resume), [resume])
@@ -107,9 +163,26 @@ function EditorWorkspace({ draft }) {
     window.scrollTo(0, scrollByView.current[view])
   }, [view])
 
+  function handleTabKeys(event) {
+    const next = nextIndexForKey(event.key, VIEWS.indexOf(view), VIEWS.length)
+    if (next === null) return
+    event.preventDefault()
+    showView(VIEWS[next])
+    document.getElementById(`aba-${VIEWS[next]}`)?.focus()
+  }
+
   function chooseTemplate(id) {
     setTemplateId(id)
     setSearchParams({ modelo: id }, { replace: true })
+  }
+
+  function handleTemplateKeys(event) {
+    const current = TEMPLATES.findIndex((template) => template.id === templateId)
+    const next = nextIndexForKey(event.key, Math.max(current, 0), TEMPLATES.length)
+    if (next === null) return
+    event.preventDefault()
+    chooseTemplate(TEMPLATES[next].id)
+    document.getElementById(`modelo-${TEMPLATES[next].id}`)?.focus()
   }
 
   function fillWithSample() {
@@ -128,27 +201,37 @@ function EditorWorkspace({ draft }) {
 
   function restartValidation() {
     setShowAllErrors(false)
+    setSummaryOpen(false)
     setFormKey((key) => key + 1)
   }
 
-  // Pendências não impedem o PDF: a pessoa vê o que revisar e decide se gera mesmo assim.
+  /*
+   * Sem pendências, abre a impressão. Com pendências, volta ao formulário e mostra o resumo:
+   * - erros (obrigatórios ou dados inválidos) impedem o PDF; o foco vai ao primeiro campo com erro;
+   * - só avisos (itens opcionais incompletos): o resumo oferece "Gerar PDF mesmo assim".
+   */
   function savePdf() {
-    if (errorCount > 0) {
-      setShowAllErrors(true)
-      setRevealErrors((count) => count + 1)
-      const message =
-        errorCount === 1
-          ? 'Há 1 campo para revisar no currículo. Gerar o PDF mesmo assim?'
-          : `Há ${errorCount} campos para revisar no currículo. Gerar o PDF mesmo assim?`
-      if (!window.confirm(message)) {
-        showView('form')
-        // Espera o formulário exibir as mensagens antes de levar a pessoa ao primeiro campo.
-        requestAnimationFrame(() => {
-          document.querySelector('[aria-invalid="true"]')?.focus()
-        })
-        return
-      }
+    if (errorCount === 0) {
+      setSummaryOpen(false)
+      printResume(resume)
+      return
     }
+    const { blocking } = splitBySeverity(errors)
+    setShowAllErrors(true)
+    setRevealErrors((count) => count + 1)
+    setSummaryOpen(true)
+    showView('form')
+    // Espera o formulário abrir os grupos e exibir as mensagens antes de mover o foco.
+    requestAnimationFrame(() => {
+      const target = blocking.length
+        ? [...document.querySelectorAll('[data-field]')].find((field) => blocking.includes(field.dataset.field))
+        : document.getElementById(SUMMARY_HEADING_ID)
+      target?.focus()
+    })
+  }
+
+  function printFromSummary() {
+    setSummaryOpen(false)
     printResume(resume)
   }
 
@@ -165,13 +248,41 @@ function EditorWorkspace({ draft }) {
             </Link>
           </div>
 
-          <div className={styles.templatePicker} role="radiogroup" aria-label="Modelo do currículo">
+          <div className={styles.viewTabs} role="tablist" aria-label="Alternar visualização" onKeyDown={handleTabKeys}>
+            {[
+              ['form', 'Editar', 'painel-editar'],
+              ['preview', 'Visualizar', 'painel-visualizar'],
+            ].map(([name, label, panel]) => (
+              <button
+                key={name}
+                id={`aba-${name}`}
+                type="button"
+                role="tab"
+                aria-selected={view === name}
+                aria-controls={panel}
+                tabIndex={view === name ? 0 : -1}
+                className={styles.viewTab}
+                onClick={() => showView(name)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div
+            className={styles.templatePicker}
+            role="radiogroup"
+            aria-label="Modelo do currículo"
+            onKeyDown={handleTemplateKeys}
+          >
             {TEMPLATES.map((template) => (
               <button
                 key={template.id}
+                id={`modelo-${template.id}`}
                 type="button"
                 role="radio"
                 aria-checked={template.id === templateId}
+                tabIndex={template.id === templateId ? 0 : -1}
                 className={styles.templateOption}
                 onClick={() => chooseTemplate(template.id)}
               >
@@ -188,35 +299,23 @@ function EditorWorkspace({ draft }) {
               Limpar
             </Button>
             <Button size="sm" onClick={savePdf} disabled={isEmpty}>
-              Salvar PDF
+              {/* Em telas estreitas só "PDF" aparece; o nome acessível continua "Salvar PDF" */}
+              <span>
+                <span className={styles.narrowHidden}>Salvar</span> PDF
+              </span>
             </Button>
           </div>
         </header>
-
-        <div className={styles.viewTabs} role="tablist" aria-label="Alternar visualização">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === 'form'}
-            className={styles.viewTab}
-            onClick={() => showView('form')}
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={view === 'preview'}
-            className={styles.viewTab}
-            onClick={() => showView('preview')}
-          >
-            Visualizar
-          </button>
-        </div>
       </div>
 
       <div className={styles.workspace}>
-        <div className={styles.formPane} data-active={view === 'form'}>
+        <div
+          id="painel-editar"
+          role="tabpanel"
+          aria-labelledby="aba-form"
+          className={styles.formPane}
+          data-active={view === 'form'}
+        >
           <div className={styles.formInner}>
             {inAppBrowser ? (
               <p className={styles.inAppNotice} role="note">
@@ -225,20 +324,7 @@ function EditorWorkspace({ draft }) {
                 navegador” antes de começar.
               </p>
             ) : null}
-            <p className={styles.saveStatus} data-warning={!draft.storageAvailable}>
-              {draft.storageAvailable
-                ? 'Rascunho salvo automaticamente neste navegador.'
-                : 'Não foi possível salvar o rascunho neste navegador. Salve em PDF antes de sair.'}
-            </p>
-            <div className={styles.titleField}>
-              <TextField
-                label="Nome deste currículo"
-                value={draft.title}
-                onChange={draft.setTitle}
-                placeholder={draft.autoTitle}
-                hint="Aparece só na sua lista de currículos. Em branco, usamos seu nome e cargo."
-              />
-            </div>
+            <SaveIndicator status={draft.saveStatus} savedAt={draft.savedAt} onRetry={draft.retrySave} />
             <ResumeForm
               key={formKey}
               resume={resume}
@@ -246,15 +332,30 @@ function EditorWorkspace({ draft }) {
               errors={errors}
               showAllErrors={showAllErrors}
               revealErrors={revealErrors}
+              summaryOpen={summaryOpen}
+              onPrint={printFromSummary}
+              onCloseSummary={() => setSummaryOpen(false)}
             />
-            <div className={styles.mobileActions}>
-              <Button variant="secondary" size="sm" onClick={fillWithSample}>
-                Usar exemplo
-              </Button>
-              <Button variant="danger" size="sm" onClick={clearAll} disabled={isEmpty}>
-                Limpar
-              </Button>
-            </div>
+            <section className={styles.settings} aria-labelledby="ajustes-titulo">
+              <h2 id="ajustes-titulo" className={styles.settingsTitle}>
+                Ajustes deste currículo
+              </h2>
+              <TextField
+                label="Nome deste currículo"
+                value={draft.title}
+                onChange={draft.setTitle}
+                placeholder={draft.autoTitle}
+                hint="Aparece só na sua lista de currículos. Em branco, usamos seu nome e cargo."
+              />
+              <div className={styles.mobileActions}>
+                <Button variant="secondary" size="sm" onClick={fillWithSample}>
+                  Usar exemplo
+                </Button>
+                <Button variant="danger" size="sm" onClick={clearAll} disabled={isEmpty}>
+                  Limpar
+                </Button>
+              </div>
+            </section>
             <p className={styles.formFooter}>
               <Link to="/curriculos">Ver meus currículos</Link> · Precisa de outro visual?{' '}
               <Link to="/modelos">Compare os modelos</Link>.
@@ -262,7 +363,13 @@ function EditorWorkspace({ draft }) {
           </div>
         </div>
 
-        <div className={styles.previewPane} data-active={view === 'preview'}>
+        <div
+          id="painel-visualizar"
+          role="tabpanel"
+          aria-labelledby="aba-preview"
+          className={styles.previewPane}
+          data-active={view === 'preview'}
+        >
           <div className={styles.previewInner}>
             <div className={styles.previewToolbar}>
               <Button

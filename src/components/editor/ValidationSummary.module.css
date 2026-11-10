@@ -1,0 +1,164 @@
+/* Resumo de pendências do PDF: faixa lateral na cor da gravidade, fundo quase branco */
+.summary {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 14px 14px 14px 16px;
+  border: 1px solid var(--gray-200);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.summary[data-tone='warning'] {
+  border-left-color: var(--warning);
+}
+
+.summary[data-tone='ok'] {
+  border-left-color: var(--blue-700);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.heading {
+  font-size: var(--text-base);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+  scroll-margin-top: calc(var(--editor-sticky, 0px) + 16px);
+}
+
+.heading:focus {
+  outline: none;
+}
+
+.heading:focus-visible {
+  border-radius: 2px;
+  box-shadow: var(--ring-strong);
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  margin: -6px -6px 0 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--gray-500);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--gray-100);
+  color: var(--ink);
+}
+
+.close:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-strong);
+}
+
+.text {
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+}
+
+.list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.issue {
+  display: grid;
+  gap: 1px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.issue:hover {
+  background: var(--gray-50);
+}
+
+.issue:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-strong);
+}
+
+.where {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--gray-500);
+}
+
+.message {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--danger);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.issue[data-tone='warning'] .message {
+  color: var(--warning-text);
+}
+
+.actions {
+  display: flex;
+  padding-top: 2px;
+}
+
+.print {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--blue-700);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+}
+
+.print:hover {
+  background: var(--blue-900);
+}
+
+.print:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-strong);
+}
+
+@media (pointer: coarse) {
+  .close {
+    width: 44px;
+    height: 44px;
+    margin: -10px -10px 0 0;
+  }
+
+  .issue,
+  .print {
+    min-height: 44px;
+  }
+}

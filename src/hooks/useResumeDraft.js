@@ -26,15 +26,22 @@ function loadRecord(id) {
  * Estado do currículo em edição. É salvo automaticamente no navegador deste dispositivo
  * (localStorage, via `resumeStore`) — não há envio para servidor.
  */
-// Sessão de edição: o currículo pedido, como foi carregado (`loaded`) e como está agora (`record`).
+/*
+ * Sessão de edição: o currículo pedido, como foi carregado (`loaded`) e como está agora (`record`).
+ * `save` é a última gravação no localStorage deste navegador (não há nuvem): `status` 'saved'
+ * (aceita pelo navegador), 'unsaved' (currículo novo, nunca gravado) ou 'error' (recusada: sem
+ * espaço ou bloqueado; a alteração segue pendente); `savedAt` é o horário e `record`, a versão.
+ */
 function openSession(id) {
   const { record, persisted } = loadRecord(id)
-  return { requestedId: id, loaded: record, record, persisted }
+  const save = persisted
+    ? { status: 'saved', savedAt: record.updatedAt, record }
+    : { status: 'unsaved', savedAt: null, record }
+  return { requestedId: id, loaded: record, record, persisted, save }
 }
 
 export function useResumeDraft(id) {
   const [session, setSession] = useState(() => openSession(id))
-  const [storageAvailable, setStorageAvailable] = useState(true)
   const pending = useRef(null)
 
   // Outro currículo pedido pela URL (/editor/:id): troca durante a renderização, sem efeito extra.
@@ -44,19 +51,28 @@ export function useResumeDraft(id) {
   }
 
   const draft = session.record
+  /*
+   * 'pending' quando a versão atual ainda não foi gravada (alteração esperando o salvamento).
+   * Uma falha continua visível até uma gravação dar certo.
+   */
+  const unsavedChanges = Boolean(draft) && draft !== session.loaded && draft !== session.save.record
+  const saveStatus = session.save.status === 'error' ? 'error' : unsavedChanges ? 'pending' : session.save.status
 
-  // Grava a versão pendente, se houver. Também chamada ao sair da página, ao trocar de currículo e ao desmontar.
+  /*
+   * Grava a versão pendente, se houver. Também chamada ao sair da página, ao trocar de currículo,
+   * ao desmontar e por "Tentar de novo". Só marca como salvo depois que o navegador aceitou a
+   * gravação; se recusar, a versão continua pendente para a próxima tentativa.
+   */
   const flush = useCallback(() => {
     const record = pending.current
     if (!record) return
-    pending.current = null
     const saved = resumeStore.saveResume(record)
-    setStorageAvailable(Boolean(saved))
-    if (saved) {
-      setSession((current) =>
-        current.record?.id === record.id && !current.persisted ? { ...current, persisted: true } : current,
-      )
-    }
+    if (saved && pending.current === record) pending.current = null
+    setSession((current) => {
+      if (current.record?.id !== record.id) return current
+      if (!saved) return { ...current, save: { ...current.save, status: 'error' } }
+      return { ...current, persisted: true, save: { status: 'saved', savedAt: saved.updatedAt, record } }
+    })
   }, [])
 
   useEffect(() => {
@@ -176,6 +192,21 @@ export function useResumeDraft(id) {
     [updateResume],
   )
 
+  /**
+   * Desfaz uma remoção: devolve o item, com todos os dados, à posição em que estava. Mantém as
+   * edições feitas depois da remoção; se a lista encolheu, o item vai para o fim. Não duplica.
+   */
+  const restoreItem = useCallback(
+    (section, item, index) =>
+      updateResume((resume) => {
+        const items = resume[section]
+        if (!Array.isArray(items) || items.some((current) => current.id === item.id)) return resume
+        const position = Math.min(Math.max(index, 0), items.length)
+        return { ...resume, [section]: [...items.slice(0, position), item, ...items.slice(position)] }
+      }),
+    [updateResume],
+  )
+
   const replaceResume = useCallback(
     (resume) => {
       // Gera novos ids para que o conteúdo copiado seja independente da origem.
@@ -199,7 +230,10 @@ export function useResumeDraft(id) {
     autoTitle: draft ? resumeTitle(draft.resume) : '',
     templateId: draft?.templateId,
     resume: draft?.resume,
-    storageAvailable,
+    saveStatus,
+    savedAt: session.save.savedAt,
+    storageAvailable: session.save.status !== 'error',
+    retrySave: flush,
     setTitle,
     setTemplateId,
     setPersonalField,
@@ -207,6 +241,7 @@ export function useResumeDraft(id) {
     addItem,
     updateItem,
     removeItem,
+    restoreItem,
     moveItem,
     addSkills,
     removeSkill,

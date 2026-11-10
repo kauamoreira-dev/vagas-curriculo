@@ -15,6 +15,10 @@
   --gray-500: #667085;
   --gray-700: #344054;
   --danger: #b42318;
+  /* Aviso (pendência que não impede o PDF): âmbar com contraste ≥ 4,5:1 sobre branco */
+  --warning: #b54708;
+  --warning-text: #93370d;
+  --warning-bg: #fffaeb;
 
   /* Tipografia */
   --font-display: 'Newsreader', 'Georgia', serif;

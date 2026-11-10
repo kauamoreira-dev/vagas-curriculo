@@ -1,8 +1,23 @@
 .section {
+  position: relative;
   display: grid;
   gap: 18px;
   padding-block: 28px;
   border-bottom: 1px solid var(--gray-200);
+  /* O índice leva até a seção sem que o título fique sob o cabeçalho fixo */
+  scroll-margin-top: calc(var(--editor-sticky, 0px) + 8px);
+}
+
+/* Seção em edição: um fio discreto na lateral enquanto algum campo dela tem o foco */
+.section:focus-within::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  bottom: 20px;
+  left: -12px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--blue-700);
 }
 
 .section:first-child {
@@ -84,9 +99,30 @@
   color: var(--gray-700);
 }
 
-.sectionStatus[data-alert] {
+.sectionStatus[data-tone='error'] {
   background: #fdecea;
   color: var(--danger);
+}
+
+.sectionStatus[data-tone='warning'] {
+  background: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+/* Nível da seção ao lado do título: Obrigatório, Recomendado ou Opcional */
+.badge {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--gray-500);
+}
+
+.sectionToggle .badge {
+  margin-left: -2px;
 }
 
 .section[data-open='false'] {
@@ -188,10 +224,43 @@ textarea.control {
   box-shadow: 0 0 0 3px rgb(180 35 24 / 0.15);
 }
 
-.error {
+.error,
+.warning {
+  display: flex;
+  gap: 6px;
   font-size: var(--text-sm);
   font-weight: 500;
   color: var(--danger);
+}
+
+/* Ícone antes da mensagem: a gravidade não depende só da cor */
+.error::before,
+.warning::before {
+  content: '!';
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: var(--danger);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+}
+
+.warning {
+  color: var(--warning-text);
+}
+
+.warning::before {
+  background: var(--warning);
+}
+
+.control[data-tone='warning'] {
+  border-color: var(--warning);
 }
 
 .item {
@@ -212,12 +281,17 @@ textarea.control {
   border-radius: var(--radius) var(--radius) 0 0;
 }
 
+/* Até duas linhas: no celular o título não some atrás das ações */
 .itemTitle {
+  display: -webkit-box;
   overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-size: var(--text-sm);
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .itemActions {
@@ -227,6 +301,8 @@ textarea.control {
 }
 
 .iconButton {
+  display: inline-grid;
+  place-items: center;
   min-width: 32px;
   height: 32px;
   padding: 0 8px;
@@ -476,4 +552,70 @@ textarea.control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 96px;
   gap: 12px;
+}
+
+/* Aviso de remoção com "Desfazer", no topo da seção onde o item estava */
+.undo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  font-size: var(--text-sm);
+  color: #fff;
+}
+
+.undoText {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.undoButton,
+.undoClose {
+  flex-shrink: 0;
+  min-height: 32px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  color: #fff;
+  cursor: pointer;
+}
+
+.undoButton {
+  padding: 0 10px;
+  font-weight: 700;
+  color: #b9cdfb;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.undoClose {
+  width: 32px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.undoButton:hover,
+.undoClose:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.undoButton:focus-visible,
+.undoClose:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+
+@media (pointer: coarse) {
+  .undoButton,
+  .undoClose {
+    min-height: 44px;
+  }
+
+  .undoClose {
+    width: 44px;
+  }
 }

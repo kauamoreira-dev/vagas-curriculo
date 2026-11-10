@@ -348,3 +348,28 @@ export function validateResume(resume, { today = new Date() } = {}) {
 
   return errors
 }
+
+// ---------- Gravidade das pendências ----------
+
+// Nome do item em seções opcionais: sem ele o item fica incompleto, mas os dados não estão errados.
+const INCOMPLETE_ITEM_FIELDS = new Set(['role', 'company', 'course', 'institution', 'name', 'language'])
+
+/**
+ * Gravidade de uma pendência de `validateResume`, pela chave:
+ * - 'error': campo obrigatório vazio (nome, contato) ou dado inválido (e-mail, telefone, CEP, data,
+ *   link, carga horária, ano). Impede gerar o PDF, que sairia com informação errada;
+ * - 'warning': item de seção opcional incompleto (ex.: experiência sem empresa). Pode ser ignorado.
+ */
+export function errorSeverity(key) {
+  const [group, , field] = String(key).split('.')
+  return group !== 'personal' && INCOMPLETE_ITEM_FIELDS.has(field) ? 'warning' : 'error'
+}
+
+/** Separa as pendências em `blocking` (erros) e `warnings` (avisos), mantendo a ordem. */
+export function splitBySeverity(errors) {
+  const keys = Object.keys(errors)
+  return {
+    blocking: keys.filter((key) => errorSeverity(key) === 'error'),
+    warnings: keys.filter((key) => errorSeverity(key) === 'warning'),
+  }
+}
