@@ -192,8 +192,9 @@ textarea.control {
   resize: vertical;
 }
 
+/* Cinza-500: contraste de 4,97:1 (o tom anterior, #98a2b3, dava 2,58:1) */
 .control::placeholder {
-  color: #98a2b3;
+  color: var(--gray-500);
 }
 
 .control:hover {

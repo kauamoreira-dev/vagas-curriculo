@@ -26,7 +26,8 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  height: 40px;
+  /* 44px: área de toque recomendada no celular */
+  height: 44px;
   padding: 0 12px;
   border: 1px solid var(--gray-300);
   border-radius: var(--radius-sm);

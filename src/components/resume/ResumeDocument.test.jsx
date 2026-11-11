@@ -325,6 +325,15 @@ describe('conteúdo parcial', () => {
     expect(listTexts(screen.getAllByRole('list')[0])).toEqual(['Rua A – PA – CEP 66010-000'])
   })
 
+  it('no Clássico, só endereço completo de fato ganha linha própria (cidade/UF sozinhas não)', () => {
+    const addressItem = () => screen.getByText(/Belém, PA/).closest('li')
+    const { rerender } = renderResume(withPersonal({ addressDisplay: 'full' }), 'classico')
+    expect(addressItem().className).not.toMatch(/fullAddress/)
+
+    rerender(<ResumeDocument templateId="classico" resume={withPersonal({ addressDisplay: 'full', street: 'Rua A' })} />)
+    expect(addressItem().className).toMatch(/fullAddress/)
+  })
+
   it('sem cidade nem estado, o endereço fica fora dos contatos', () => {
     renderResume(withPersonal({ city: '', state: '', street: 'Rua A' }))
     expect(listTexts(screen.getAllByRole('list')[0])).toEqual([

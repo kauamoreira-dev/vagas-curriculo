@@ -150,6 +150,10 @@
 }
 
 .textLink {
+  /* Área de toque de 44px sem mudar o tamanho do texto */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-weight: 600;
   color: var(--blue-700);
   text-underline-offset: 4px;

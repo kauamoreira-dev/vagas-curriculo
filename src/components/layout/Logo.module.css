@@ -2,6 +2,9 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  /* Área de toque de 44px mesmo quando só o símbolo (36px) aparece, como no editor do celular */
+  min-width: 44px;
+  min-height: 44px;
   color: var(--blue-900);
   text-decoration: none;
   white-space: nowrap;

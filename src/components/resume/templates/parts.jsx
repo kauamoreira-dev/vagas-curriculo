@@ -44,7 +44,12 @@ export function Photo({ personal, styles }) {
 }
 
 export function ContactList({ personal, styles }) {
-  const fullAddress = personal.addressDisplay === 'full'
+  // Com "endereço completo" marcado mas só cidade/UF preenchidas, o endereço é curto como os demais.
+  const fullAddress =
+    personal.addressDisplay === 'full' &&
+    [personal.street, personal.number, personal.complement, personal.district, personal.zip].some((part) =>
+      part?.trim(),
+    )
   const items = [
     { text: personal.email },
     { text: personal.phone },

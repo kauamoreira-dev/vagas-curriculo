@@ -25,12 +25,12 @@ const STEPS = [
     text: 'Clássico, Moderno ou Essencial. Dá para trocar a qualquer momento sem perder o que já foi escrito.',
   },
   {
-    title: 'Preencha ao lado da página',
+    title: 'Preencha e acompanhe a folha',
     text: 'Cada campo aparece na folha enquanto você digita. O rascunho fica salvo neste navegador.',
   },
   {
     title: 'Salve em PDF',
-    text: 'Use “Salvar PDF” no editor e escolha “Salvar como PDF” na janela de impressão do navegador.',
+    text: 'Toque em PDF no editor e salve o arquivo pela janela de impressão do navegador.',
   },
 ]
 
@@ -59,8 +59,8 @@ export function Home() {
               Um currículo claro diz mais <em>em uma página</em>.
             </h1>
             <p className={styles.lede}>
-              Preencha suas informações, veja a folha tomando forma ao lado e salve em PDF. Três
-              modelos, sem cadastro.
+              Preencha suas informações, veja a folha tomando forma e salve em PDF. Três modelos, sem
+              cadastro.
             </p>
             <div className={styles.actions}>
               <Button to={createResumePath()}>Criar meu currículo</Button>

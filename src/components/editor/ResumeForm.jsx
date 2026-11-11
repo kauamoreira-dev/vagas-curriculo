@@ -332,6 +332,9 @@ export function ResumeForm({
           </FieldRow>
           <TextField
             label="LinkedIn ou site"
+            type="url"
+            inputMode="url"
+            autoComplete="url"
             value={personal.link}
             onChange={(value) => setPersonalField('link', value)}
             placeholder="linkedin.com/in/seu-nome"
@@ -407,7 +410,7 @@ export function ResumeForm({
                     label="Número"
                     value={personal.number}
                     onChange={(value) => setPersonalField('number', value)}
-                    inputMode="numeric"
+                    placeholder="Ex.: 120 ou S/N"
                   />
                   <TextField
                     label="Complemento"

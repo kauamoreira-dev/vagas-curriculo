@@ -589,3 +589,19 @@ describe('data de nascimento', () => {
     expect(screen.getByRole('region', { name: /Corrija 1 campo/ })).toBeInTheDocument()
   })
 })
+
+describe('teclado dos campos', () => {
+  it('LinkedIn ou site abre o teclado de endereço web; Número aceita letras (ex.: S/N)', () => {
+    openSeeded()
+    const link = screen.getByLabelText('LinkedIn ou site')
+    expect(link).toHaveAttribute('type', 'url')
+    expect(link).toHaveAttribute('inputmode', 'url')
+    expect(link).toHaveAttribute('autocomplete', 'url')
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Endereço completo' }))
+    const number = screen.getByLabelText('Número')
+    expect(number).not.toHaveAttribute('inputmode')
+    fireEvent.change(number, { target: { value: 'S/N' } })
+    expect(number).toHaveValue('S/N')
+  })
+})
