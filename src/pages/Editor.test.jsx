@@ -606,6 +606,42 @@ describe('teclado dos campos', () => {
   })
 })
 
+describe('conflito entre abas', () => {
+  // Outra aba grava este currículo (um instante depois, para a versão ser diferente) e avisa.
+  async function otherTabSaves(id, change) {
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    const stored = resumeStore.getResume(id)
+    resumeStore.saveResume({ ...stored, resume: change(stored.resume) })
+    act(() => window.dispatchEvent(new StorageEvent('storage', { key: `vagas-curriculo:v2:curriculo:${id}` })))
+  }
+  const renamed = (resume) => ({ ...resume, personal: { ...resume.personal, name: 'Ana Souza Lima' } })
+
+  it('com alterações aqui, avisa e oferece as três opções; "Usar a outra versão" mostra a de lá', async () => {
+    const record = openSeeded()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Resumo profissional' }), { target: { value: 'Resumo desta aba' } })
+    await otherTabSaves(record.id, renamed)
+
+    const notice = screen.getByRole('alert')
+    expect(notice).toHaveTextContent('Este currículo mudou em outra aba')
+    expect(within(notice).getByRole('button', { name: 'Manter as minhas' })).toBeInTheDocument()
+    expect(within(notice).getByRole('button', { name: 'Salvar as minhas como cópia' })).toBeInTheDocument()
+    expect(screen.getByText(/^Não salvo: há uma versão mais recente/)).toBeInTheDocument()
+
+    fireEvent.click(within(notice).getByRole('button', { name: 'Usar a outra versão' }))
+    expect(screen.queryByText('Este currículo mudou em outra aba')).toBeNull()
+    expect(screen.getByLabelText(/Nome completo/)).toHaveValue('Ana Souza Lima')
+    expect(screen.getByRole('textbox', { name: 'Resumo profissional' })).toHaveValue(SAMPLE_RESUME.summary)
+  })
+
+  it('sem nada pendente aqui, atualiza sozinho e diz que veio de outra aba', async () => {
+    const record = openSeeded()
+    await otherTabSaves(record.id, renamed)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByLabelText(/Nome completo/)).toHaveValue('Ana Souza Lima')
+    expect(screen.getByText(/^Atualizado com a versão de outra aba/)).toBeInTheDocument()
+  })
+})
+
 describe('outro telefone', () => {
   it('o botão abre o campo; o número aparece na prévia e Remover o apaga', () => {
     openSeeded()

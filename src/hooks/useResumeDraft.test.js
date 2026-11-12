@@ -523,3 +523,206 @@ describe('ações (B10)', () => {
     expect(resumeStore.listResumes()).toHaveLength(1)
   })
 })
+
+describe('várias abas: conflito entre versões', () => {
+  // "Outra aba" grava o currículo direto no armazenamento, um instante depois (como o navegador faz).
+  function otherTabSaves(id, change) {
+    vi.advanceTimersByTime(5)
+    const stored = resumeStore.getResume(id)
+    const saved = resumeStore.saveResume({ ...stored, resume: change(stored.resume) })
+    return saved
+  }
+  function otherTabDeletes(id) {
+    vi.advanceTimersByTime(5)
+    resumeStore.deleteResume(id)
+  }
+  // O evento que o navegador dispara nas outras abas quando o localStorage muda.
+  function storageEvent(id) {
+    act(() => window.dispatchEvent(new StorageEvent('storage', { key: RESUME_PREFIX + id })))
+  }
+  const named = (name) => (resume) => ({ ...resume, personal: { ...resume.personal, name } })
+  const stored = (id) => resumeStore.getResume(id).resume
+
+  function openTab() {
+    const record = seed()
+    return { record, ...renderDraft(record.id) }
+  }
+
+  it('sem nada pendente, adota a versão da outra aba; a edição seguinte soma, sem perder a de lá', () => {
+    const { record, result } = openTab()
+    otherTabSaves(record.id, named('Ana Souza Lima'))
+    storageEvent(record.id)
+    expect(result.current.resume.personal.name).toBe('Ana Souza Lima')
+    expect(result.current).toMatchObject({ syncedFromOtherTab: true, conflict: null, saveStatus: 'saved' })
+
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    wait()
+    expect(stored(record.id)).toMatchObject({ summary: 'Resumo desta aba', personal: { name: 'Ana Souza Lima' } })
+  })
+
+  it('com alteração pendente, não sobrescreve: abre um conflito e para de gravar', () => {
+    const { record, result } = openTab()
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    otherTabSaves(record.id, named('Ana Souza Lima'))
+    storageEvent(record.id)
+    expect(result.current.conflict).toEqual({ deleted: false, otherSavedAt: expect.any(String), recoverySaved: false })
+    expect(result.current.saveStatus).toBe('conflict')
+
+    wait(5000)
+    expect(stored(record.id)).toMatchObject({ personal: { name: 'Ana Souza Lima' }, summary: SAMPLE_RESUME.summary })
+  })
+
+  it('confere antes de gravar mesmo sem o evento (aba congelada): não sobrescreve', () => {
+    const { record, result } = openTab()
+    otherTabSaves(record.id, named('Ana Souza Lima'))
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    wait()
+    expect(result.current.conflict).not.toBeNull()
+    expect(stored(record.id).personal.name).toBe('Ana Souza Lima')
+    expect(stored(record.id).summary).toBe(SAMPLE_RESUME.summary)
+  })
+
+  it('"Manter as minhas" grava esta versão por cima e encerra o conflito', () => {
+    const { record, result } = openTab()
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    otherTabSaves(record.id, named('Ana Souza Lima'))
+    storageEvent(record.id)
+    let ok
+    act(() => {
+      ok = result.current.keepMine()
+    })
+    expect(ok).toBe(true)
+    expect(result.current).toMatchObject({ conflict: null, saveStatus: 'saved' })
+    expect(stored(record.id)).toMatchObject({ summary: 'Resumo desta aba', personal: { name: 'Marina Albuquerque' } })
+    // Depois disso, a gravação automática volta a funcionar normalmente.
+    act(() => result.current.setField('objective', 'Objetivo'))
+    wait()
+    expect(stored(record.id).objective).toBe('Objetivo')
+  })
+
+  it('"Usar a outra versão" descarta as alterações daqui e mostra a de lá', () => {
+    const { record, result } = openTab()
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    otherTabSaves(record.id, named('Ana Souza Lima'))
+    storageEvent(record.id)
+    act(() => result.current.acceptOther())
+    expect(result.current.conflict).toBeNull()
+    expect(result.current.resume).toMatchObject({ summary: SAMPLE_RESUME.summary, personal: { name: 'Ana Souza Lima' } })
+    wait(5000)
+    expect(stored(record.id).personal.name).toBe('Ana Souza Lima')
+  })
+
+  it('"Salvar as minhas como cópia" preserva as duas versões', () => {
+    const { record, result } = openTab()
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    otherTabSaves(record.id, named('Ana Souza Lima'))
+    storageEvent(record.id)
+    let copyId
+    act(() => {
+      copyId = result.current.saveMineAsCopy()
+    })
+    expect(copyId).toEqual(expect.any(String))
+    expect(copyId).not.toBe(record.id)
+    expect(resumeStore.getResume(copyId)).toMatchObject({
+      title: 'Marina Albuquerque · Analista de Dados (minha versão)',
+      resume: { summary: 'Resumo desta aba' },
+    })
+    expect(stored(record.id).personal.name).toBe('Ana Souza Lima')
+    expect(result.current.conflict).toBeNull()
+  })
+
+  it('excluído em outra aba com alterações aqui: "Salvar de novo" recria; descartar não recria', () => {
+    const first = openTab()
+    act(() => first.result.current.setField('summary', 'Resumo desta aba'))
+    otherTabDeletes(first.record.id)
+    storageEvent(first.record.id)
+    expect(first.result.current.conflict).toEqual({ deleted: true, otherSavedAt: null, recoverySaved: false })
+    act(() => {
+      first.result.current.keepMine()
+    })
+    expect(stored(first.record.id).summary).toBe('Resumo desta aba')
+
+    const second = openTab()
+    act(() => second.result.current.setField('summary', 'Outro resumo'))
+    otherTabDeletes(second.record.id)
+    storageEvent(second.record.id)
+    act(() => second.result.current.acceptOther())
+    second.unmount()
+    expect(resumeStore.getResume(second.record.id)).toBeNull()
+  })
+
+  it('sair sem escolher guarda as alterações daqui numa cópia (uma só), sem tocar na outra versão', () => {
+    const { record, result, unmount } = openTab()
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    otherTabSaves(record.id, named('Ana Souza Lima'))
+    storageEvent(record.id)
+    act(() => window.dispatchEvent(new Event('pagehide')))
+    unmount()
+    const copies = resumeStore.listResumes().filter((item) => item.id !== record.id)
+    expect(copies).toHaveLength(1)
+    expect(copies[0].title).toMatch(/\(alterações não salvas\)$/)
+    expect(resumeStore.getResume(copies[0].id).resume.summary).toBe('Resumo desta aba')
+    expect(stored(record.id)).toMatchObject({ personal: { name: 'Ana Souza Lima' }, summary: SAMPLE_RESUME.summary })
+  })
+
+  it('"Manter as minhas" sem espaço: avisa a falha e o conflito continua (nada se perde)', () => {
+    const { record, result } = openTab()
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    otherTabSaves(record.id, named('Ana Souza Lima'))
+    storageEvent(record.id)
+    failWrites()
+    let ok
+    act(() => {
+      ok = result.current.keepMine()
+    })
+    expect(ok).toBe(false)
+    expect(result.current.conflict).not.toBeNull()
+    expect(result.current.storageAvailable).toBe(false)
+    expect(result.current.resume.summary).toBe('Resumo desta aba')
+  })
+
+  it('evento de outro currículo é ignorado', () => {
+    const { record, result } = openTab()
+    const other = seed({ title: 'Outro' })
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    storageEvent(other.id)
+    wait()
+    expect(result.current.conflict).toBeNull()
+    expect(stored(record.id).summary).toBe('Resumo desta aba')
+  })
+
+  it('aba oculta em conflito (o celular pode encerrá-la sem pagehide) já guarda a cópia de recuperação', () => {
+    const { record, result } = openTab()
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    otherTabSaves(record.id, named('Ana Souza Lima'))
+    storageEvent(record.id)
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    act(() => document.dispatchEvent(new Event('visibilitychange')))
+    act(() => document.dispatchEvent(new Event('visibilitychange')))
+    visibility.mockRestore()
+
+    const copies = resumeStore.listResumes().filter((item) => item.id !== record.id)
+    expect(copies).toHaveLength(1)
+    expect(resumeStore.getResume(copies[0].id).resume.summary).toBe('Resumo desta aba')
+    expect(result.current.conflict.recoverySaved).toBe(true)
+    // Ao voltar, escolher resolve o conflito e a cópia de recuperação deixa de ser necessária.
+    act(() => {
+      result.current.keepMine()
+    })
+    expect(resumeStore.listResumes().map((item) => item.id)).toEqual([record.id])
+  })
+
+  it('"Usar a outra versão" mostra a versão gravada agora, mesmo que tenha chegado sem evento', () => {
+    const { record, result } = openTab()
+    act(() => result.current.setField('summary', 'Resumo desta aba'))
+    otherTabSaves(record.id, named('Primeira da outra aba'))
+    storageEvent(record.id)
+    otherTabSaves(record.id, named('Segunda da outra aba'))
+    act(() => result.current.acceptOther())
+    expect(result.current.resume.personal.name).toBe('Segunda da outra aba')
+    act(() => result.current.setField('objective', 'Objetivo'))
+    wait()
+    expect(result.current.conflict).toBeNull()
+    expect(stored(record.id)).toMatchObject({ objective: 'Objetivo', personal: { name: 'Segunda da outra aba' } })
+  })
+})

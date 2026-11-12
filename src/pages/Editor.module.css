@@ -202,6 +202,43 @@
   padding: 20px var(--gutter) 48px;
 }
 
+/* Conflito entre abas: aviso fora da área fixa, visível em Editar e em Visualizar */
+.conflict {
+  display: grid;
+  gap: 8px;
+  margin: 12px var(--gutter) 0;
+  padding: 14px 16px;
+  border: 1px solid var(--gray-200);
+  border-left: 3px solid var(--warning);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.conflictTitle {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.conflictText {
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+}
+
+.conflictActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.saveStatus[data-status='conflict'] {
+  color: var(--warning-text);
+}
+
+.saveStatus[data-status='conflict'] .saveDot {
+  background: var(--warning);
+}
+
 /* Estado do salvamento neste navegador: uma linha discreta com um ponto de cor */
 .saveStatus {
   display: flex;

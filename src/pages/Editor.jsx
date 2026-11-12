@@ -116,7 +116,7 @@ function formatSavedAt(iso) {
  * Estado real da gravação neste navegador (localStorage), vindo de `useResumeDraft`.
  * "Salvo" só aparece depois que o navegador aceitou a gravação. Não há nuvem: o texto diz onde está.
  */
-function SaveIndicator({ status, savedAt, onRetry }) {
+function SaveIndicator({ status, savedAt, onRetry, synced }) {
   if (status === 'error') {
     return (
       <div className={styles.saveError} role="alert">
@@ -133,13 +133,49 @@ function SaveIndicator({ status, savedAt, onRetry }) {
   const text = {
     unsaved: 'Ainda não salvo. O salvamento começa quando você editar.',
     pending: 'Salvando neste navegador…',
-    saved: `Salvo neste navegador ${formatSavedAt(savedAt)}`.trim(),
+    saved: synced
+      ? `Atualizado com a versão de outra aba ${formatSavedAt(savedAt)}`.trim()
+      : `Salvo neste navegador ${formatSavedAt(savedAt)}`.trim(),
+    conflict: 'Não salvo: há uma versão mais recente deste currículo em outra aba.',
   }[status]
   return (
     <p className={styles.saveStatus} data-status={status}>
       <span className={styles.saveDot} aria-hidden="true" />
       {text}
     </p>
+  )
+}
+
+/**
+ * Outra aba (ou janela) gravou ou excluiu este currículo enquanto havia alterações não salvas aqui.
+ * Nada é sobrescrito sem a pessoa escolher; sair sem escolher guarda as alterações daqui numa cópia.
+ */
+function ConflictNotice({ conflict, onKeepMine, onAcceptOther, onSaveCopy }) {
+  return (
+    <section className={styles.conflict} role="alert" aria-labelledby="conflito-titulo">
+      <h2 id="conflito-titulo" className={styles.conflictTitle}>
+        {conflict.deleted ? 'Este currículo foi excluído em outra aba' : 'Este currículo mudou em outra aba'}
+      </h2>
+      <p className={styles.conflictText}>
+        {conflict.deleted
+          ? 'Suas alterações feitas aqui ainda não foram salvas. Escolha o que fazer com elas.'
+          : `Outra aba ou janela salvou uma versão ${formatSavedAt(conflict.otherSavedAt)}. Suas alterações feitas aqui ainda não foram salvas.`}
+        {conflict.recoverySaved
+          ? ' Por segurança, quando você saiu desta aba elas foram guardadas num currículo à parte, “(alterações não salvas)”.'
+          : ''}
+      </p>
+      <div className={styles.conflictActions}>
+        <Button size="sm" onClick={onKeepMine}>
+          {conflict.deleted ? 'Salvar de novo' : 'Manter as minhas'}
+        </Button>
+        <Button variant="secondary" size="sm" onClick={onSaveCopy}>
+          Salvar as minhas como cópia
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onAcceptOther}>
+          {conflict.deleted ? 'Descartar e sair' : 'Usar a outra versão'}
+        </Button>
+      </div>
+    </section>
   )
 }
 
@@ -173,6 +209,7 @@ function nextIndexForKey(key, current, total) {
 function EditorWorkspace({ draft }) {
   const { resume, templateId, setTemplateId } = draft
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [view, setView] = useState('form')
   // No celular as duas abas rolam a mesma página: cada uma volta para onde a pessoa estava.
   const scrollByView = useRef({ form: 0, preview: 0 })
@@ -323,6 +360,19 @@ function EditorWorkspace({ draft }) {
     })
   }
 
+  // Conflito: "Usar a outra versão" descarta as alterações daqui; se o currículo foi excluído, volta à lista.
+  function acceptOther() {
+    const deleted = draft.conflict?.deleted
+    draft.acceptOther()
+    if (deleted) navigate('/curriculos')
+  }
+
+  // Conflito: guarda as alterações daqui numa cópia e abre a cópia (o original fica com a outra versão).
+  function saveMineAsCopy() {
+    const copyId = draft.saveMineAsCopy()
+    if (copyId) navigate(`/editor/${copyId}`)
+  }
+
   function printFromSummary() {
     setSummaryOpen(false)
     printResume(resume)
@@ -401,6 +451,15 @@ function EditorWorkspace({ draft }) {
         </header>
       </div>
 
+      {draft.conflict ? (
+        <ConflictNotice
+          conflict={draft.conflict}
+          onKeepMine={draft.keepMine}
+          onAcceptOther={acceptOther}
+          onSaveCopy={saveMineAsCopy}
+        />
+      ) : null}
+
       <div className={styles.workspace}>
         <div
           id="painel-editar"
@@ -417,7 +476,12 @@ function EditorWorkspace({ draft }) {
                 navegador” antes de começar.
               </p>
             ) : null}
-            <SaveIndicator status={draft.saveStatus} savedAt={draft.savedAt} onRetry={draft.retrySave} />
+            <SaveIndicator
+              status={draft.saveStatus}
+              savedAt={draft.savedAt}
+              onRetry={draft.retrySave}
+              synced={draft.syncedFromOtherTab}
+            />
             <ResumeForm
               key={formKey}
               resume={resume}
