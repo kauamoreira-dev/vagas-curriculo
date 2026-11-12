@@ -42,18 +42,60 @@
   box-shadow: var(--ring-strong);
 }
 
+/* Dois traços que se cruzam num "×" quando o menu abre */
 .menuIcon {
   position: relative;
   width: 16px;
-  height: 10px;
-  border-top: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transition: transform 0.2s ease;
+  height: 12px;
 }
 
-.menuIcon[data-open='true'] {
-  border-bottom-color: transparent;
-  transform: translateY(4px);
+.menuIcon::before,
+.menuIcon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  transition:
+    top 0.2s ease,
+    transform 0.2s ease;
+}
+
+.menuIcon::before {
+  top: 1px;
+}
+
+.menuIcon::after {
+  top: 9px;
+}
+
+.menuIcon[data-open='true']::before,
+.menuIcon[data-open='true']::after {
+  top: 5px;
+}
+
+.menuIcon[data-open='true']::before {
+  transform: rotate(45deg);
+}
+
+.menuIcon[data-open='true']::after {
+  transform: rotate(-45deg);
+}
+
+/*
+ * Fundo escurecido atrás do menu aberto: separa o menu da página e fecha ao toque.
+ * Absoluto (não fixo): o desfoque do cabeçalho faria dele a referência de um elemento fixo.
+ */
+.scrim {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  height: 100dvh;
+  background: rgb(16 24 40 / 0.32);
 }
 
 .nav {
@@ -99,7 +141,8 @@
 }
 
 @media (min-width: 860px) {
-  .menuButton {
+  .menuButton,
+  .scrim {
     display: none;
   }
 

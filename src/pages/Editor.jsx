@@ -439,7 +439,7 @@ function EditorWorkspace({ draft }) {
           </div>
 
           <div className={styles.actions}>
-            <Button variant="ghost" size="sm" onClick={fillWithSample}>
+            <Button variant="tonal" size="sm" onClick={fillWithSample}>
               Usar exemplo
             </Button>
             <Button variant="danger" size="sm" onClick={clearAll} disabled={isEmpty}>
@@ -509,7 +509,7 @@ function EditorWorkspace({ draft }) {
                 hint="Aparece só na sua lista de currículos. Em branco, usamos seu nome e cargo."
               />
               <div className={styles.mobileActions}>
-                <Button variant="secondary" size="sm" onClick={fillWithSample}>
+                <Button variant="tonal" size="sm" onClick={fillWithSample}>
                   Usar exemplo
                 </Button>
                 <Button variant="danger" size="sm" onClick={clearAll} disabled={isEmpty}>

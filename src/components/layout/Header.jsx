@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { createResumePath } from '@/services/resumeStore'
@@ -14,8 +14,21 @@ const NAV_ITEMS = [
 
 export function Header() {
   const [open, setOpen] = useState(false)
+  const menuButtonRef = useRef(null)
   // Fecha o menu móvel ao escolher um destino.
   const close = () => setOpen(false)
+
+  // Esc fecha o menu aberto e devolve o foco ao botão que o abriu.
+  useEffect(() => {
+    if (!open) return undefined
+    const onKeyDown = (event) => {
+      if (event.key !== 'Escape') return
+      setOpen(false)
+      menuButtonRef.current?.focus()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open])
 
   return (
     <header className={styles.header}>
@@ -23,6 +36,7 @@ export function Header() {
         <Logo />
 
         <button
+          ref={menuButtonRef}
           type="button"
           className={styles.menuButton}
           aria-expanded={open}
@@ -32,6 +46,8 @@ export function Header() {
           <span className={styles.menuIcon} data-open={open} aria-hidden="true" />
           {open ? 'Fechar' : 'Menu'}
         </button>
+
+        {open ? <div className={styles.scrim} onClick={close} aria-hidden="true" /> : null}
 
         <nav
           id="menu-principal"

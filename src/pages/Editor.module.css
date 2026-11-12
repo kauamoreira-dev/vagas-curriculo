@@ -259,7 +259,7 @@
 }
 
 .saveStatus[data-status='saved'] .saveDot {
-  background: #12805c;
+  background: var(--success);
 }
 
 .saveStatus[data-status='pending'] .saveDot {

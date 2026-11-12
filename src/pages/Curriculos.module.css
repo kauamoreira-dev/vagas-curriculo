@@ -39,7 +39,7 @@
 }
 
 .status[data-error='true'] {
-  background: #fdecea;
+  background: var(--danger-bg);
   color: var(--danger);
 }
 

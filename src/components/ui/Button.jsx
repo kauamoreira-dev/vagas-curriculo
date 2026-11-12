@@ -3,7 +3,8 @@ import styles from './Button.module.css'
 
 /**
  * Botão do sistema. Com `to`, vira link de navegação interna.
- * variant: primary | secondary | ghost | danger — size: md | sm
+ * variant: primary | secondary | tonal | ghost | danger — size: md | sm
+ * `tonal` é para ações de apoio que precisam aparecer (ex.: Usar exemplo) sem competir com a primária.
  */
 export function Button({
   to,

@@ -109,4 +109,16 @@ test.describe('computador', () => {
     expect(await page.evaluate(() => document.documentElement.scrollHeight - innerHeight)).toBe(0)
     expect(await horizontalOverflow(page)).toBe(0)
   })
+
+  test('erro num campo não desloca o vizinho de linha (e-mail e telefone continuam alinhados)', async ({ page }) => {
+    await createResume(page)
+    const email = page.getByLabel('E-mail')
+    const phone = page.getByLabel('Telefone')
+    await email.fill('camila.rocha@')
+    await email.blur()
+    await expect(page.getByText(/E-mail inválido/).first()).toBeVisible()
+    const [emailBox, phoneBox] = [await email.boundingBox(), await phone.boundingBox()]
+    // Na mesma linha, lado a lado; a mensagem de erro cresce para baixo sem empurrar o telefone.
+    expect(Math.abs(phoneBox.y - emailBox.y)).toBeLessThan(1)
+  })
 })

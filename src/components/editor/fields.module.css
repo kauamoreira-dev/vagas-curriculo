@@ -100,7 +100,7 @@
 }
 
 .sectionStatus[data-tone='error'] {
-  background: #fdecea;
+  background: var(--danger-bg);
   color: var(--danger);
 }
 
@@ -161,8 +161,13 @@
   }
 }
 
+/*
+ * align-content: start mantém rótulo e caixa juntos no topo. Sem ele, quando o vizinho de linha
+ * cresce (ex.: mensagem de erro no e-mail), o grid espalhava a sobra e o campo descia.
+ */
 .field {
   display: grid;
+  align-content: start;
   gap: 6px;
 }
 
@@ -174,7 +179,7 @@
 
 .control {
   width: 100%;
-  min-height: 42px;
+  min-height: var(--control-height);
   padding: 10px 12px;
   border: 1px solid var(--gray-300);
   border-radius: var(--radius-sm);
@@ -192,13 +197,13 @@ textarea.control {
   resize: vertical;
 }
 
-/* Cinza-500: contraste de 4,97:1 (o tom anterior, #98a2b3, dava 2,58:1) */
+/* Cinza-500: contraste de 5,6:1 (o tom anterior, #98a2b3, dava 2,58:1) */
 .control::placeholder {
   color: var(--gray-500);
 }
 
 .control:hover {
-  border-color: #98a2b3;
+  border-color: var(--gray-400);
 }
 
 .control:focus,
@@ -217,12 +222,14 @@ textarea.control {
   color: var(--danger);
 }
 
+/* Campo com erro: borda vermelha e um fundo levíssimo, para achar o campo ao rolar */
 .control[aria-invalid='true'] {
   border-color: var(--danger);
+  background: #fffbfa;
 }
 
 .control[aria-invalid='true']:focus {
-  box-shadow: 0 0 0 3px rgb(180 35 24 / 0.15);
+  box-shadow: var(--ring-danger);
 }
 
 .error,

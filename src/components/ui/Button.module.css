@@ -2,7 +2,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   font-weight: 600;
@@ -13,7 +13,9 @@
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
 }
 
 .button:focus-visible {
@@ -21,13 +23,13 @@
   box-shadow: var(--ring-strong);
 }
 
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+/* Ao pressionar, desce 1 px: confirma o toque sem animação chamativa */
+.button:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .md {
-  height: 46px;
+  height: var(--control-height);
   padding: 0 20px;
   font-size: var(--text-base);
 }
@@ -41,13 +43,14 @@
 /* Em telas de toque, o botão pequeno mantém o visual mas ganha a altura mínima recomendada */
 @media (pointer: coarse) {
   .sm {
-    height: 44px;
+    height: var(--control-height);
   }
 }
 
 .primary {
   background: var(--blue-700);
   color: #fff;
+  box-shadow: var(--shadow-xs);
 }
 
 .primary:hover {
@@ -63,6 +66,16 @@
 .secondary:hover {
   border-color: var(--blue-700);
   color: var(--blue-700);
+}
+
+/* Tonal: ação de apoio com presença (ex.: Usar exemplo), sem competir com a primária */
+.tonal {
+  background: var(--blue-50);
+  color: var(--blue-900);
+}
+
+.tonal:hover {
+  background: var(--blue-100);
 }
 
 .ghost {
@@ -81,5 +94,23 @@
 }
 
 .danger:hover {
-  background: #fdecea;
+  background: var(--danger-bg);
+}
+
+/*
+ * Desabilitado: cinza com texto legível (4,9:1), no lugar do azul a 50% de opacidade, que parecia
+ * um botão com defeito. Vale para todas as variantes.
+ */
+.button:disabled {
+  background: var(--gray-100);
+  border-color: var(--gray-100);
+  color: var(--gray-500);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.ghost:disabled,
+.danger:disabled {
+  background: transparent;
+  border-color: transparent;
 }
