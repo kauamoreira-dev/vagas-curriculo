@@ -1,4 +1,8 @@
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 import styles from './SectionIndex.module.css'
+
+// A partir desta largura, o índice vira um trilho sempre aberto ao lado do formulário.
+export const RAIL_QUERY = '(min-width: 1360px)'
 
 const STATE_LABEL = {
   error: 'Corrigir',
@@ -41,62 +45,89 @@ function StateIcon({ state }) {
 }
 
 /**
- * Índice das seções do formulário, recolhido numa linha até a pessoa abrir (<details> nativo:
- * teclado e leitor de tela sem código extra). Mostra quantas estão preenchidas, numa contagem e
- * numa barra fina, e leva até cada uma (abrindo-a, se estiver fechada).
+ * Índice das seções do formulário. Mostra quantas estão preenchidas, numa contagem e numa barra
+ * fina, e leva até cada uma (abrindo-a, se estiver fechada).
+ * - Telas largas (RAIL_QUERY): trilho sempre aberto ao lado do formulário, com a estrutura e o
+ *   progresso à vista o tempo todo.
+ * - Demais: recolhido numa linha até a pessoa abrir (<details> nativo: teclado e leitor de tela
+ *   sem código extra).
  * `sections`: [{ name, title, main, filled, state }], onde `main` separa as principais das
  * complementares, `filled` conta para o progresso e `state` é 'error' | 'warning' | 'filled' | 'empty'.
  */
 export function SectionIndex({ sections, onJump }) {
+  const rail = useMediaQuery(RAIL_QUERY)
   const filled = sections.filter((section) => section.filled).length
   const groups = [
     { label: 'Principais', items: sections.filter((section) => section.main) },
     { label: 'Complementares', items: sections.filter((section) => !section.main) },
   ]
+  const progress = (
+    <>
+      <span className={styles.summaryTitle}>Seções</span>
+      <span className={styles.progress}>
+        {filled} de {sections.length} preenchidas
+      </span>
+    </>
+  )
+  // A contagem já é o texto acessível; a barra é só visual.
+  const bar = (
+    <span className={styles.bar} aria-hidden="true">
+      <span className={styles.barFill} style={{ width: `${(filled / sections.length) * 100}%` }} />
+    </span>
+  )
+  const nav = (
+    <nav aria-label="Seções do currículo" className={styles.nav}>
+      {groups.map((group) => (
+        <div key={group.label} className={styles.group}>
+          <p className={styles.groupLabel}>{group.label}</p>
+          <ul className={styles.grid}>
+            {group.items.map((section) => (
+              <li key={section.name}>
+                <button
+                  type="button"
+                  className={styles.link}
+                  data-state={section.state}
+                  onClick={() => onJump(section.name)}
+                >
+                  <StateIcon state={section.state} />
+                  <span className={styles.text}>
+                    <span className={styles.linkTitle}>{section.title}</span>{' '}
+                    <span
+                      className={VISIBLE_STATES.has(section.state) ? styles.state : styles.srOnly}
+                      data-state={section.state}
+                    >
+                      {STATE_LABEL[section.state]}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </nav>
+  )
+
+  if (rail) {
+    return (
+      <aside className={styles.rail} data-section-index="rail">
+        <div className={styles.railHead}>
+          {progress}
+          {bar}
+        </div>
+        {nav}
+      </aside>
+    )
+  }
 
   return (
-    <details className={styles.index}>
+    <details className={styles.index} data-section-index="compact">
       <summary className={styles.summary}>
-        <span className={styles.summaryTitle}>Seções</span>
-        <span className={styles.progress}>
-          {filled} de {sections.length} preenchidas
-        </span>
+        {progress}
         <span className={styles.chevron} aria-hidden="true" />
-        {/* A contagem acima já é o texto acessível; a barra é só visual. */}
-        <span className={styles.bar} aria-hidden="true">
-          <span className={styles.barFill} style={{ width: `${(filled / sections.length) * 100}%` }} />
-        </span>
+        {bar}
       </summary>
-      <nav aria-label="Seções do currículo" className={styles.nav}>
-        {groups.map((group) => (
-          <div key={group.label} className={styles.group}>
-            <p className={styles.groupLabel}>{group.label}</p>
-            <ul className={styles.grid}>
-              {group.items.map((section) => (
-                <li key={section.name}>
-                  <button
-                    type="button"
-                    className={styles.link}
-                    data-state={section.state}
-                    onClick={() => onJump(section.name)}
-                  >
-                    <StateIcon state={section.state} />
-                    <span className={styles.text}>
-                      <span className={styles.linkTitle}>{section.title}</span>{' '}
-                      <span
-                        className={VISIBLE_STATES.has(section.state) ? styles.state : styles.srOnly}
-                        data-state={section.state}
-                      >
-                        {STATE_LABEL[section.state]}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </nav>
+      {nav}
     </details>
   )
 }

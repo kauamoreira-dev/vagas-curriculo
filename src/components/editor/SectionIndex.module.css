@@ -218,3 +218,41 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/*
+ * Trilho (telas largas): o índice sempre aberto, numa coluna ao lado do formulário. Mesmos itens e
+ * estados do índice recolhido; uma coluna só, com o progresso fixo no topo.
+ */
+.rail {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+}
+
+.railHead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  padding: 4px 6px var(--space-3);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.rail .nav {
+  padding: 0;
+  border-top: 0;
+}
+
+.rail .grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.rail .link {
+  min-height: 36px;
+  padding: 6px;
+  font-size: var(--text-sm);
+}
+
+.rail .link:hover {
+  background: var(--paper);
+}

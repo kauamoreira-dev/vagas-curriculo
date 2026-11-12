@@ -384,6 +384,12 @@ function EditorWorkspace({ draft }) {
 
   const isEmpty = !hasResumeContent(resume)
 
+  // Prévia vazia: leva ao primeiro campo (no celular, volta para a aba Editar antes).
+  function startWithName() {
+    showView('form')
+    requestAnimationFrame(() => document.querySelector('[data-field="personal.name"]')?.focus())
+  }
+
   return (
     <div className={styles.app} data-view={view}>
       <div className={styles.chrome}>
@@ -393,6 +399,10 @@ function EditorWorkspace({ draft }) {
             <Link to="/curriculos" className={styles.crumb}>
               Meus currículos
             </Link>
+            {/* Qual currículo está aberto (o nome se ajusta em "Ajustes deste currículo") */}
+            <span className={styles.docTitle} title={draft.title || draft.autoTitle}>
+              {draft.title || draft.autoTitle}
+            </span>
           </div>
 
           <div className={styles.viewTabs} role="tablist" aria-label="Alternar visualização" onKeyDown={handleTabKeys}>
@@ -445,13 +455,27 @@ function EditorWorkspace({ draft }) {
             <Button variant="danger" size="sm" onClick={clearAll} disabled={isEmpty}>
               Limpar
             </Button>
-            <Button size="sm" onClick={savePdf} disabled={isEmpty}>
+            <Button
+              size="sm"
+              onClick={savePdf}
+              disabled={isEmpty}
+              aria-describedby={isEmpty ? 'motivo-pdf' : undefined}
+            >
               {/* Em telas estreitas só "PDF" aparece; o nome acessível continua "Salvar PDF" */}
               <span>
                 <span className={styles.narrowHidden}>Salvar</span> PDF
               </span>
             </Button>
           </div>
+          {/*
+            Por que o PDF está desabilitado: lido junto com o botão (e escrito na prévia vazia).
+            Fora de .actions: no celular, só o último item dali fica visível (o botão PDF).
+          */}
+          {isEmpty ? (
+            <span id="motivo-pdf" className="visually-hidden">
+              Preencha o currículo para gerar o PDF.
+            </span>
+          ) : null}
         </header>
       </div>
 
@@ -486,6 +510,13 @@ function EditorWorkspace({ draft }) {
               onRetry={draft.retrySave}
               synced={draft.syncedFromOtherTab}
             />
+            {/* Celular e tablet: na aba Editar o seletor de modelo fica escondido (cabeçalho baixo com o teclado aberto) */}
+            <p className={styles.templateNote}>
+              Modelo <strong>{getTemplate(templateId)?.name}</strong>
+              <button type="button" className={styles.templateNoteButton} onClick={() => showView('preview')}>
+                Trocar modelo
+              </button>
+            </p>
             <ResumeForm
               key={formKey}
               resume={resume}
@@ -534,7 +565,8 @@ function EditorWorkspace({ draft }) {
           <div className={styles.previewInner}>
             <div className={styles.previewToolbar}>
               <p className={styles.pageEstimate} title="O número exato aparece na tela de impressão.">
-                {pageEstimate ? formatPageEstimate(pageEstimate) : null}
+                {/* Vazio, a folha mostra o exemplo: a estimativa seria dele, não da pessoa */}
+                {pageEstimate && !isEmpty ? formatPageEstimate(pageEstimate) : null}
               </p>
               <div className={styles.zoom} role="radiogroup" aria-label="Zoom da prévia" onKeyDown={handleZoomKeys}>
                 {ZOOMS.map(([value, label]) => (
@@ -553,12 +585,30 @@ function EditorWorkspace({ draft }) {
                 ))}
               </div>
             </div>
-            <div ref={scrollerRef} className={styles.sheetScroller} data-actual-size={actualSize}>
-              <ScaledSheet className={styles.sheet} actualSize={actualSize} onScaleChange={setSheetScale}>
-                <div ref={documentRef}>
-                  <ResumeDocument templateId={templateId} resume={resume} />
+            <div className={styles.sheetStage}>
+              <div ref={scrollerRef} className={styles.sheetScroller} data-actual-size={actualSize}>
+                <ScaledSheet className={styles.sheet} actualSize={actualSize} onScaleChange={setSheetScale}>
+                  {/* Currículo vazio: o exemplo esmaecido mostra como a folha fica no modelo escolhido */}
+                  <div ref={documentRef} className={isEmpty ? styles.ghost : undefined} aria-hidden={isEmpty || undefined}>
+                    <ResumeDocument templateId={templateId} resume={isEmpty ? SAMPLE_RESUME : resume} />
+                  </div>
+                </ScaledSheet>
+              </div>
+              {isEmpty ? (
+                <div className={styles.emptyCard} role="note" aria-labelledby="previa-vazia-titulo">
+                  <p className={styles.emptyEyebrow}>Exemplo</p>
+                  <h2 id="previa-vazia-titulo" className={styles.emptyTitle}>
+                    Seu currículo aparece aqui
+                  </h2>
+                  <p className={styles.emptyText}>
+                    A folha atrás é só um exemplo do modelo {getTemplate(templateId)?.name}. Enquanto você
+                    preenche, ela toma forma com os seus dados. Preencha o currículo para gerar o PDF.
+                  </p>
+                  <Button size="sm" onClick={startWithName}>
+                    Começar pelo nome
+                  </Button>
                 </div>
-              </ScaledSheet>
+              ) : null}
             </div>
             <p className={styles.previewNote}>
               Prévia em A4; a quebra exata das páginas aparece na impressão. {pdfHint}

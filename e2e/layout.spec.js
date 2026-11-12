@@ -111,6 +111,8 @@ test.describe('computador', () => {
   })
 
   test('erro num campo não desloca o vizinho de linha (e-mail e telefone continuam alinhados)', async ({ page }) => {
+    // Largura de tablet: o formulário ocupa a tela e e-mail e telefone ficam lado a lado.
+    await page.setViewportSize({ width: 800, height: 900 })
     await createResume(page)
     const email = page.getByLabel('E-mail')
     const phone = page.getByLabel('Telefone')
@@ -118,7 +120,39 @@ test.describe('computador', () => {
     await email.blur()
     await expect(page.getByText(/E-mail inválido/).first()).toBeVisible()
     const [emailBox, phoneBox] = [await email.boundingBox(), await phone.boundingBox()]
-    // Na mesma linha, lado a lado; a mensagem de erro cresce para baixo sem empurrar o telefone.
+    expect(phoneBox.x).toBeGreaterThan(emailBox.x + emailBox.width)
+    // Na mesma linha; a mensagem de erro cresce para baixo sem empurrar o telefone.
     expect(Math.abs(phoneBox.y - emailBox.y)).toBeLessThan(1)
+  })
+
+  test('na coluna estreita do formulário (desktop), o e-mail não fica cortado', async ({ page }) => {
+    await createResume(page)
+    const email = page.getByLabel('E-mail')
+    await email.fill('camila.rocha@email.com.br')
+    // Campo largo o bastante para o endereço inteiro: dois campos lado a lado só quando há espaço.
+    expect(await email.evaluate((input) => input.scrollWidth <= input.clientWidth)).toBe(true)
+  })
+
+  test('em tela larga, o índice de seções fica sempre aberto ao lado do formulário', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await createResume(page)
+    const index = page.getByRole('navigation', { name: 'Seções do currículo' })
+    await expect(index).toBeVisible()
+    const form = page.getByRole('heading', { name: /Dados pessoais/ })
+    expect((await index.boundingBox()).x + (await index.boundingBox()).width).toBeLessThan((await form.boundingBox()).x)
+    await index.getByRole('button', { name: /^Idiomas/ }).click()
+    await expect(page.getByRole('button', { name: 'Idiomas Opcional' })).toBeFocused()
+  })
+
+  test('currículo vazio: a prévia orienta e "Começar pelo nome" leva ao campo do nome', async ({ page }) => {
+    await createResume(page)
+    await expect(page.getByRole('heading', { name: 'Seu currículo aparece aqui' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Salvar PDF' })).toHaveAccessibleDescription(
+      'Preencha o currículo para gerar o PDF.',
+    )
+    await page.getByRole('button', { name: 'Começar pelo nome' }).click()
+    await expect(page.getByLabel(/Nome completo/)).toBeFocused()
+    await page.getByLabel(/Nome completo/).fill('Ana')
+    await expect(page.getByRole('heading', { name: 'Seu currículo aparece aqui' })).toBeHidden()
   })
 })
