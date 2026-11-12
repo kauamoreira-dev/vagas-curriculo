@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { render } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, render } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ScaledSheet } from './ScaledSheet'
 
 // O jsdom não mede layout: a largura fica 0, como no primeiro quadro de um navegador real.
@@ -44,5 +44,58 @@ describe('ScaledSheet antes de medir a largura', () => {
     )
     expect(frameOf(container).style.aspectRatio).toBe('')
     expect(frameOf(container)).toHaveStyle({ height: '1123px', width: '794px' })
+  })
+})
+
+describe('onScaleChange', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  // ResizeObserver que entrega a largura quando o teste quiser, como o navegador depois do 1º quadro.
+  function stubResizeObserver() {
+    const observers = []
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback) {
+          this.callback = callback
+          observers.push(this)
+        }
+        observe(element) {
+          this.element = element
+        }
+        disconnect() {}
+      },
+    )
+    return (width) => {
+      for (const observer of observers) observer.callback([{ contentRect: { width }, target: observer.element }])
+    }
+  }
+
+  it('avisa a escala 0 antes da medida e a escala real quando a largura chega', () => {
+    const deliverWidth = stubResizeObserver()
+    const onScaleChange = vi.fn()
+    render(
+      <ScaledSheet onScaleChange={onScaleChange}>
+        <p>Folha</p>
+      </ScaledSheet>,
+    )
+    expect(onScaleChange).toHaveBeenLastCalledWith(0)
+
+    // Quem mede a folha (a estimativa de páginas) precisa saber que agora há o que medir.
+    act(() => deliverWidth(397))
+    expect(onScaleChange).toHaveBeenLastCalledWith(0.5)
+  })
+
+  it('em tamanho real, a escala é 1 desde o início', () => {
+    stubResizeObserver()
+    const onScaleChange = vi.fn()
+    render(
+      <ScaledSheet actualSize onScaleChange={onScaleChange}>
+        <p>Folha</p>
+      </ScaledSheet>,
+    )
+    expect(onScaleChange).toHaveBeenLastCalledWith(1)
   })
 })

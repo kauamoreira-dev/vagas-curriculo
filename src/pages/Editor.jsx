@@ -223,6 +223,8 @@ function EditorWorkspace({ draft }) {
   const documentRef = useRef(null)
   const scrollerRef = useRef(null)
   const [pageEstimate, setPageEstimate] = useState(null)
+  // Escala da prévia: 0 até a largura da folha ser medida, quando ainda não há o que medir.
+  const [sheetScale, setSheetScale] = useState(0)
   const [showAllErrors, setShowAllErrors] = useState(false)
   // Incrementado a cada "Salvar PDF" com pendências: o formulário abre os grupos onde elas estão.
   const [revealErrors, setRevealErrors] = useState(0)
@@ -258,6 +260,8 @@ function EditorWorkspace({ draft }) {
 
   // Remede a cada mudança no conteúdo, no modelo ou na aba, e de novo quando as fontes carregam
   // (elas mudam a quebra das linhas). Fora da aba Visualizar no celular a folha está oculta: mantém a anterior.
+  // A escala entra nas dependências: com fontes já em cache, as duas medições podiam acontecer antes
+  // de a folha ter largura (escala 0, sem medida) e nada media de novo — a estimativa não aparecia.
   useEffect(() => {
     const done = new AbortController()
     const measure = () => {
@@ -270,7 +274,7 @@ function EditorWorkspace({ draft }) {
       done.abort()
       cancelAnimationFrame(frame)
     }
-  }, [resume, templateId, view, zoom])
+  }, [resume, templateId, view, zoom, sheetScale])
 
   function handleTabKeys(event) {
     const next = nextIndexForKey(event.key, VIEWS.indexOf(view), VIEWS.length)
@@ -550,7 +554,7 @@ function EditorWorkspace({ draft }) {
               </div>
             </div>
             <div ref={scrollerRef} className={styles.sheetScroller} data-actual-size={actualSize}>
-              <ScaledSheet className={styles.sheet} actualSize={actualSize}>
+              <ScaledSheet className={styles.sheet} actualSize={actualSize} onScaleChange={setSheetScale}>
                 <div ref={documentRef}>
                   <ResumeDocument templateId={templateId} resume={resume} />
                 </div>

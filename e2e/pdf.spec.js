@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test'
-import { createResume, fillWithSample, pdfImageDraws, pdfImages, pdfPages, uploadPhoto } from './helpers'
+import {
+  A4_HEIGHT as PAGE_HEIGHT,
+  PRINT_MARGIN as MARGIN,
+  createResume,
+  fillWithSample,
+  pdfImageDraws,
+  pdfImages,
+  pdfPages,
+  textBaselines,
+  uploadPhoto,
+} from './helpers'
 
 /*
  * PDF de verdade, gerado pelo Chromium a partir do CSS de impressão (como no "Salvar PDF").
@@ -43,21 +53,6 @@ const LONG_SUMMARY = Array.from(
 
 async function printPdf(page, options = {}) {
   return pdfPages(await page.pdf({ preferCSSPageSize: true, printBackground: true, ...options }))
-}
-
-// 14 mm a 96 dpi: margem vertical da folha, em cada página.
-const MARGIN = (14 / 25.4) * 96
-const PAGE_HEIGHT = (297 / 25.4) * 96
-
-/*
- * Linhas de base do texto de cada página, em px a partir do topo da folha. O Chromium posiciona
- * cada página com uma translação (3.125 = 300/96 dpi) e cada trecho de texto com `Tm`.
- */
-function textBaselines(content) {
-  // A primeira translação (fundo) não tem deslocamento; a do conteúdo desce até o topo da página.
-  const offsets = [...content.matchAll(/3\.125 0 0 3\.125 [-\d.]+ (-?[\d.]+) cm/g)].map(([, y]) => Number(y))
-  const top = -Math.min(0, ...offsets) / 3.125
-  return [...content.matchAll(/1 0 0 -1 [-\d.]+ ([-\d.]+) Tm/g)].map(([, y]) => Number(y) - top)
 }
 
 test.beforeEach(async ({ page, isMobile }) => {

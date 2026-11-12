@@ -8,8 +8,9 @@ import styles from './ScaledSheet.module.css'
  * `clip` fixa a altura em uma página (true) ou numa fração dela (ex.: 0.7);
  * sem ele, a moldura acompanha a altura do conteúdo.
  * `actualSize` mostra a folha sem reduzir (largura A4); quem chama cuida da rolagem horizontal.
+ * `onScaleChange` recebe a escala aplicada (0 até a largura ser medida), depois de pintada.
  */
-export function ScaledSheet({ children, clip = false, actualSize = false, className = '' }) {
+export function ScaledSheet({ children, clip = false, actualSize = false, className = '', onScaleChange }) {
   const frameRef = useRef(null)
   const sheetRef = useRef(null)
   const width = useElementWidth(frameRef)
@@ -24,6 +25,11 @@ export function ScaledSheet({ children, clip = false, actualSize = false, classN
   }, [clip])
 
   const scale = actualSize ? 1 : width / PAGE_WIDTH
+
+  useEffect(() => {
+    onScaleChange?.(scale)
+  }, [scale, onScaleChange])
+
   const clipRatio = clip === true ? 1 : clip
   const height =
     (clipRatio ? PAGE_HEIGHT * clipRatio : Math.max(contentHeight, PAGE_HEIGHT)) * scale

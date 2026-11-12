@@ -305,13 +305,34 @@
     break-inside: auto;
   }
 
+  /*
+   * Cabeçalho junto do 1º tópico, só quando há algo depois dele. Num item só com cabeçalho
+   * (formação, curso), o break-after do último filho passaria para o item e a seção: seções
+   * assim seguidas viravam um bloco único, que saltava inteiro de página mesmo cabendo em parte.
+   */
   .entryHead {
     break-inside: avoid;
+  }
+
+  .entryHead:not(:last-child) {
     break-after: avoid;
   }
 
   .bullets li {
     break-inside: avoid;
+  }
+
+  /*
+   * Lista curta (até 3 tópicos, como as informações adicionais) não se parte: vai inteira, com o
+   * título da seção, para a página seguinte, em vez de deixar lá um tópico solto.
+   */
+  .bullets:not(:has(> li:nth-child(4))) {
+    break-inside: avoid;
+  }
+
+  /* Numa lista que se parte, o último tópico não fica sozinho na página seguinte (como widows) */
+  .bullets > li:last-child:not(:first-child) {
+    break-before: avoid;
   }
 
   .paragraph {
