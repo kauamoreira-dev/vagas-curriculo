@@ -605,3 +605,23 @@ describe('teclado dos campos', () => {
     expect(number).toHaveValue('S/N')
   })
 })
+
+describe('outro telefone', () => {
+  it('o botão abre o campo; o número aparece na prévia e Remover o apaga', () => {
+    openSeeded()
+    expect(screen.queryByLabelText('Outro telefone')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '+ Adicionar outro telefone' }))
+    fireEvent.change(screen.getByLabelText('Outro telefone'), { target: { value: '9132221111' } })
+    expect(screen.getByLabelText('Outro telefone')).toHaveValue('(91) 3222-1111')
+    expect(within(printArea()).getByText('(91) 3222-1111')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remover outro telefone' }))
+    expect(screen.queryByLabelText('Outro telefone')).toBeNull()
+    expect(within(printArea()).queryByText('(91) 3222-1111')).toBeNull()
+  })
+
+  it('currículo com segundo telefone salvo já abre com o campo preenchido', () => {
+    openSeeded({ phone2: '(91) 3222-1111' })
+    expect(screen.getByLabelText('Outro telefone')).toHaveValue('(91) 3222-1111')
+  })
+})

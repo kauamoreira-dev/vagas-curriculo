@@ -177,6 +177,15 @@ describe('validateResume', () => {
     expect(validateResume(resume, { today })).toEqual({})
   })
 
+  it('o segundo telefone conta como contato e é validado como o primeiro', () => {
+    const resume = emptyResume()
+    resume.personal.name = 'Ana'
+    resume.personal.phone2 = '(91) 3222-1111'
+    expect(validateResume(resume, { today })).toEqual({})
+    resume.personal.phone2 = '(91) 1234'
+    expect(validateResume(resume, { today })).toHaveProperty('personal.phone2')
+  })
+
   it('trata item só com espaços como vazio', () => {
     const resume = emptyResume()
     resume.personal.name = 'Ana'

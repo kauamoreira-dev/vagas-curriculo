@@ -644,3 +644,26 @@ textarea.control {
     min-height: 44px;
   }
 }
+
+/* Campo extra com Remover ao lado (ex.: Outro telefone); o botão fica na altura da caixa de texto */
+.extraField {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.extraField > .iconButton {
+  margin-top: calc(var(--text-sm) * 1.55 + 6px + 5px);
+}
+
+.addField {
+  justify-self: start;
+  margin-top: -6px;
+}
+
+@media (pointer: coarse) {
+  .extraField > .iconButton {
+    margin-top: calc(var(--text-sm) * 1.55 + 6px - 1px);
+  }
+}

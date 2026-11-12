@@ -54,6 +54,7 @@ export function createEmptyResume() {
       title: '',
       email: '',
       phone: '',
+      phone2: '', // segundo telefone, opcional (ex.: recado ou fixo)
       birthDate: '', // AAAA-MM-DD (campo de data) ou DD/MM/AAAA; o currículo mostra a idade
       ageVisible: true,
       city: '',
@@ -188,6 +189,7 @@ export const SAMPLE_RESUME = {
     title: 'Analista de Dados',
     email: 'marina.exemplo@email.com',
     phone: '(91) 90000-0000',
+    phone2: '',
     birthDate: '',
     ageVisible: true,
     city: 'Belém',

@@ -112,6 +112,8 @@ export function ResumeForm({
   const [revealed, setRevealed] = useState(revealErrors)
   // Último item removido, para "Desfazer": { section, item, index, title }.
   const [removed, setRemoved] = useState(null)
+  // O segundo telefone fica escondido atrás de um botão até a pessoa pedir (ou já ter um salvo).
+  const [phone2Open, setPhone2Open] = useState(() => hasText(resume.personal.phone2))
   const undoRef = useRef(null)
 
   // Nova tentativa de gerar o PDF com pendências: abre os grupos onde elas estão.
@@ -175,6 +177,18 @@ export function ResumeForm({
     const index = items ? items.findIndex((item) => item.id === itemId) : -1
     if (index >= 0) parts.push(itemTitle(name, items[index], index))
     return { where: parts.join(' · '), message: errors[key] }
+  }
+
+  function addPhone2() {
+    setPhone2Open(true)
+    focusField('personal.phone2')
+  }
+
+  // Apaga o número e volta ao botão de adicionar, com o foco nele.
+  function removePhone2() {
+    setPersonalField('phone2', '')
+    setPhone2Open(false)
+    requestAnimationFrame(() => document.querySelector('[data-add="phone2"]')?.focus())
   }
 
   function removeWithUndo(section, item, index, title) {
@@ -313,7 +327,7 @@ export function ResumeForm({
               label="E-mail"
               type="email"
               // O aviso "ao menos um contato" fica no e-mail, mas também aparece após visitar o telefone.
-              {...validation('personal.email', ['personal.phone'])}
+              {...validation('personal.email', ['personal.phone', 'personal.phone2'])}
               value={personal.email}
               onChange={(value) => setPersonalField('email', value)}
               autoComplete="email"
@@ -330,6 +344,33 @@ export function ResumeForm({
               placeholder="(11) 91234-5678"
             />
           </FieldRow>
+          {phone2Open || hasText(personal.phone2) ? (
+            <div className={styles.extraField}>
+              <TextField
+                label="Outro telefone"
+                type="tel"
+                inputMode="tel"
+                mask={formatPhone}
+                {...validation('personal.phone2')}
+                value={personal.phone2}
+                onChange={(value) => setPersonalField('phone2', value)}
+                autoComplete="tel"
+                placeholder="(11) 3456-7890"
+              />
+              <button
+                type="button"
+                className={`${styles.iconButton} ${styles.remove}`}
+                onClick={removePhone2}
+                aria-label="Remover outro telefone"
+              >
+                Remover
+              </button>
+            </div>
+          ) : (
+            <Button variant="ghost" size="sm" className={styles.addField} data-add="phone2" onClick={addPhone2}>
+              + Adicionar outro telefone
+            </Button>
+          )}
           <TextField
             label="LinkedIn ou site"
             type="url"

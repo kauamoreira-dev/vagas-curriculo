@@ -387,3 +387,16 @@ describe('ResumeDocument', () => {
     expect(new Set(html).size).toBe(TEMPLATE_IDS.length)
   })
 })
+
+describe.each(TEMPLATE_IDS)('segundo telefone no modelo %s', (templateId) => {
+  it('aparece logo depois do primeiro', () => {
+    renderResume(withPersonal({ phone2: '(91) 3222-1111' }), templateId)
+    expect(listTexts(screen.getAllByRole('list')[0])).toEqual([
+      'marina.exemplo@email.com',
+      '(91) 90000-0000',
+      '(91) 3222-1111',
+      'Belém, PA',
+      'linkedin.com/in/exemplo',
+    ])
+  })
+})

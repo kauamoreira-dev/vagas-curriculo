@@ -53,6 +53,7 @@ export function ContactList({ personal, styles }) {
   const items = [
     { text: personal.email },
     { text: personal.phone },
+    { text: personal.phone2 },
     // Idade calculada na hora (no PDF, a do dia em que foi gerado), se a pessoa quiser mostrar.
     { text: personal.ageVisible === false ? '' : formatAge(personal.birthDate) },
     // Endereço completo é longo: os modelos podem dar uma linha só para ele.

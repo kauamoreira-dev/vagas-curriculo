@@ -303,7 +303,9 @@ export function validateResume(resume, { today = new Date() } = {}) {
   if (emailError) errors['personal.email'] = emailError
   const phoneError = validatePhone(personal.phone)
   if (phoneError) errors['personal.phone'] = phoneError
-  if (isBlank(personal.email) && isBlank(personal.phone)) {
+  const phone2Error = validatePhone(personal.phone2)
+  if (phone2Error) errors['personal.phone2'] = phone2Error
+  if (isBlank(personal.email) && isBlank(personal.phone) && isBlank(personal.phone2)) {
     errors['personal.email'] = 'Informe ao menos um contato: e-mail ou telefone.'
   }
   const zipError = validateZip(personal.zip)
