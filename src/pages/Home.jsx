@@ -34,6 +34,9 @@ const STEPS = [
   },
 ]
 
+// O que muda a decisão de quem chega: sem conta, dados no aparelho, PDF pronto.
+const PROMISES = ['Sem cadastro', 'Fica só no seu aparelho', 'PDF pronto para imprimir']
+
 const QUESTIONS = [
   {
     q: 'Preciso criar uma conta?',
@@ -44,10 +47,23 @@ const QUESTIONS = [
     a: 'Somente no armazenamento local do navegador que você está usando. Nada é enviado para servidores. Se você limpar os dados do navegador ou trocar de aparelho, o rascunho não estará lá.',
   },
   {
+    q: 'Como levo meus currículos para outro aparelho?',
+    a: 'Em Meus currículos, toque em “Baixar cópia de segurança”. No outro aparelho, abra Meus currículos e use “Restaurar de um arquivo”. O arquivo fica só com você.',
+  },
+  {
     q: 'Consigo exportar em Word?',
     a: 'Ainda não. Por enquanto a exportação é em PDF, pela impressão do navegador.',
   },
 ]
+
+/*
+ * No carrossel do celular, o cartão que recebe o foco (Tab) vem inteiro para a tela. Sozinho, o
+ * navegador não rola a faixa quando o cartão já aparece em parte (a ponta do seguinte à direita).
+ * Na grade do computador não há rolagem lateral, e a chamada não move nada.
+ */
+function revealInCarousel(event) {
+  event.currentTarget.scrollIntoView({ block: 'nearest', inline: 'start' })
+}
 
 export function Home() {
   return (
@@ -68,13 +84,36 @@ export function Home() {
                 Ver modelos
               </Button>
             </div>
+            <ul className={styles.promises}>
+              {PROMISES.map((promise) => (
+                <li key={promise}>
+                  <svg viewBox="0 0 16 16" aria-hidden="true" className={styles.check}>
+                    <path d="M3.5 8.5l3 3 6-7" />
+                  </svg>
+                  {promise}
+                </li>
+              ))}
+            </ul>
           </div>
 
           <figure className={styles.specimen}>
             <div className={styles.sheetWrap}>
-              <ScaledSheet clip={0.66} className={styles.sheet}>
-                <ResumeDocument templateId="classico" resume={SAMPLE_RESUME} />
-              </ScaledSheet>
+              {/* No celular, números sobre a folha marcam o trecho de cada anotação (legenda abaixo) */}
+              <div className={styles.sheetFrame}>
+                <ScaledSheet clip={0.66} className={styles.sheet}>
+                  <ResumeDocument templateId="classico" resume={SAMPLE_RESUME} />
+                </ScaledSheet>
+                {MARGIN_NOTES.map((note, index) => (
+                  <span
+                    key={note.section}
+                    className={styles.noteMarker}
+                    style={{ '--top': `${note.top}%` }}
+                    aria-hidden="true"
+                  >
+                    {index + 1}
+                  </span>
+                ))}
+              </div>
               <ol className={styles.notes} aria-label="Anotações sobre o exemplo">
                 {MARGIN_NOTES.map((note) => (
                   <li
@@ -125,11 +164,24 @@ export function Home() {
           <ul className={styles.modelGrid}>
             {TEMPLATES.map((template) => (
               <li key={template.id}>
-                <Link to={`/editor?modelo=${template.id}`} className={styles.modelCard}>
-                  <ScaledSheet clip className={styles.modelThumb}>
-                    <ResumeDocument templateId={template.id} resume={SAMPLE_RESUME} />
-                  </ScaledSheet>
-                  <span className={styles.modelName}>{template.name}</span>
+                <Link
+                  to={`/editor?modelo=${template.id}`}
+                  className={styles.modelCard}
+                  onFocus={revealInCarousel}
+                >
+                  {/* Miniatura decorativa: sem ela no nome do link, o leitor de tela não lê o currículo inteiro */}
+                  <div aria-hidden="true">
+                    <ScaledSheet clip className={styles.modelThumb}>
+                      <ResumeDocument templateId={template.id} resume={SAMPLE_RESUME} />
+                    </ScaledSheet>
+                  </div>
+                  <span className={styles.modelInfo}>
+                    <span className={styles.modelName}>{template.name}</span>
+                    <span className={styles.modelFor}>{template.bestFor}</span>
+                    <span className={styles.modelAction}>
+                      Usar este modelo <span aria-hidden="true">→</span>
+                    </span>
+                  </span>
                 </Link>
               </li>
             ))}

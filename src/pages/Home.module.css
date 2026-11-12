@@ -1,6 +1,6 @@
 /* ---------- Hero ---------- */
 .hero {
-  padding-block: 48px 64px;
+  padding-block: var(--space-6) var(--space-7);
   background: var(--paper);
 }
 
@@ -43,6 +43,36 @@
   gap: 12px;
 }
 
+/* Faixa de confiança: o que pesa na decisão de quem chega, logo abaixo dos botões */
+.promises {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.promises li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.check {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--success);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Folha de exemplo com anotações de revisão na margem */
 .specimen {
   margin: 0;
@@ -52,9 +82,32 @@
   position: relative;
 }
 
+/* Referência das marcas numeradas: só a folha (as anotações ficam fora, abaixo ou ao lado) */
+.sheetFrame {
+  position: relative;
+}
+
 .sheet {
   border-radius: 2px;
   box-shadow: var(--shadow-sheet);
+}
+
+/* Número sobre a folha, no trecho comentado pela anotação de mesmo número (celular e tablet) */
+.noteMarker {
+  position: absolute;
+  top: var(--top);
+  left: -8px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--blue-700);
+  box-shadow: 0 0 0 3px var(--paper);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
 }
 
 .notes {
@@ -89,9 +142,50 @@
   color: var(--gray-500);
 }
 
+/* Celular e tablet: a legenda repete o número da marca sobre a folha */
+@media (max-width: 1023.98px) {
+  .notes {
+    counter-reset: note;
+  }
+
+  .note {
+    position: relative;
+    padding-left: 30px;
+    counter-increment: note;
+  }
+
+  .note::before {
+    content: counter(note);
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-full);
+    background: var(--blue-50);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--blue-900);
+  }
+}
+
+@media (min-width: 768px) {
+  .hero {
+    padding-block: var(--space-7) var(--space-8);
+  }
+}
+
 @media (min-width: 1024px) {
   .hero {
     padding-block: 72px 88px;
+  }
+
+  /* No desktop as anotações ligam-se à folha por linhas-guia: os números não são necessários */
+  .noteMarker {
+    display: none;
   }
 
   .heroGrid {
@@ -161,29 +255,38 @@
 
 /* ---------- Como funciona ---------- */
 .steps {
-  padding-block: 72px;
+  padding-block: var(--space-7);
   background: var(--gray-50);
   scroll-margin-top: 64px;
 }
 
 .stepList {
   display: grid;
-  gap: 32px;
-  margin: 40px 0 0;
+  gap: var(--space-5);
+  margin: var(--space-6) 0 0;
   padding: 0;
   list-style: none;
 }
 
+/*
+ * align-content: start mantém número, título e texto no topo. Sem ele, os passos (esticados até a
+ * altura do mais alto) espalhavam a sobra entre as linhas e os títulos ficavam desalinhados.
+ * No celular, o número fica à esquerda do título: o passo ocupa menos altura.
+ */
 .step {
   display: grid;
-  gap: 8px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  gap: var(--space-1) var(--space-4);
   padding-top: 20px;
   border-top: 1px solid var(--gray-300);
 }
 
 .stepNumber {
+  grid-row: span 2;
+  min-width: 1.2em;
   font-family: var(--font-display);
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   font-style: italic;
   line-height: 1;
   color: var(--blue-700);
@@ -199,15 +302,30 @@
 }
 
 @media (min-width: 768px) {
+  .steps {
+    padding-block: 72px;
+  }
+
   .stepList {
     grid-template-columns: repeat(3, 1fr);
     gap: 40px;
+    margin-top: 40px;
+  }
+
+  .step {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+
+  .stepNumber {
+    grid-row: auto;
+    font-size: 2.5rem;
   }
 }
 
 /* ---------- Modelos ---------- */
 .models {
-  padding-block: 72px;
+  padding-block: var(--space-7);
 }
 
 .modelsHead {
@@ -218,19 +336,64 @@
   gap: 12px 24px;
 }
 
+/*
+ * Celular: carrossel com rolagem lateral, um cartão por vez e a ponta do seguinte à vista (sinal de
+ * que há mais). A faixa vai de borda a borda da tela, mas o primeiro cartão alinha com o texto.
+ * A rolagem fica dentro da faixa: a página não rola de lado.
+ */
 .modelGrid {
-  display: grid;
-  gap: 24px;
-  margin: 40px 0 0;
-  padding: 0;
+  display: flex;
+  gap: var(--space-4);
+  margin: var(--space-6) calc(-1 * var(--gutter)) 0;
+  padding: 0 var(--gutter) var(--space-3);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--gutter);
+  scrollbar-width: thin;
   list-style: none;
+}
+
+.modelGrid > li {
+  flex: 0 0 min(78%, 300px);
+  scroll-snap-align: start;
 }
 
 .modelCard {
   display: grid;
   gap: 14px;
+  /* Espaço para o anel de foco não ser cortado pela faixa com rolagem */
+  margin: 4px;
+  border-radius: var(--radius-sm);
   color: inherit;
   text-decoration: none;
+}
+
+.modelCard:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-strong);
+}
+
+.modelInfo {
+  display: grid;
+  gap: 2px;
+}
+
+.modelFor {
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+}
+
+.modelAction {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--blue-700);
+}
+
+.modelCard:hover .modelAction {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .modelThumb {
@@ -255,13 +418,22 @@
 
 @media (min-width: 640px) {
   .modelGrid {
+    display: grid;
     grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin: 40px 0 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .modelCard {
+    margin: 0;
   }
 }
 
 /* ---------- Perguntas ---------- */
 .faq {
-  padding-block: 72px;
+  padding-block: var(--space-7);
   border-top: 1px solid var(--gray-200);
 }
 
@@ -317,7 +489,7 @@
 
 /* ---------- Fechamento ---------- */
 .closing {
-  padding-block: 64px;
+  padding-block: var(--space-7);
   background: var(--blue-900);
 }
 
@@ -335,4 +507,16 @@
   font-size: var(--text-2xl);
   line-height: 1.2;
   color: #fff;
+}
+
+/* Respiro das seções: menor no celular (página mais curta), o de antes a partir do tablet */
+@media (min-width: 768px) {
+  .models,
+  .faq {
+    padding-block: 72px;
+  }
+
+  .closing {
+    padding-block: var(--space-8);
+  }
 }
