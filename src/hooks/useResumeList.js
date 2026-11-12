@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { createBackup } from '@/services/backup'
 import { INDEX_KEY, resumeStore } from '@/services/resumeStore'
 
 /**
@@ -41,5 +42,17 @@ export function useResumeList() {
     [refresh],
   )
 
-  return { items, createResume, duplicateResume, deleteResume }
+  // Cópia de segurança: conteúdo do arquivo, plano de restauração (sem gravar) e restauração.
+  const exportBackup = useCallback(() => createBackup(resumeStore.exportRecords()), [])
+  const planImport = useCallback((records) => resumeStore.planImport(records), [])
+  const importBackup = useCallback(
+    (plan) => {
+      const result = resumeStore.importPlan(plan)
+      refresh()
+      return result
+    },
+    [refresh],
+  )
+
+  return { items, createResume, duplicateResume, deleteResume, exportBackup, planImport, importBackup }
 }

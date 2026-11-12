@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { BackupPanel } from '@/components/backup/BackupPanel'
 import { Button } from '@/components/ui/Button'
 import { getTemplate } from '@/data/templates'
 import { useResumeList } from '@/hooks/useResumeList'
@@ -15,7 +16,7 @@ function formatUpdatedAt(value) {
 const STORAGE_ERROR = 'Não foi possível salvar neste navegador. Libere espaço ou saia do modo privado.'
 
 export function Curriculos() {
-  const { items, createResume, duplicateResume, deleteResume } = useResumeList()
+  const { items, createResume, duplicateResume, deleteResume, exportBackup, planImport, importBackup } = useResumeList()
   const navigate = useNavigate()
   const location = useLocation()
   // Resultado da última ação, anunciado para leitores de tela. Chega pronto quando o editor não
@@ -135,6 +136,8 @@ export function Curriculos() {
             ))}
           </ul>
         )}
+
+        <BackupPanel resumeCount={items.length} onExport={exportBackup} onPlan={planImport} onImport={importBackup} />
       </div>
     </div>
   )

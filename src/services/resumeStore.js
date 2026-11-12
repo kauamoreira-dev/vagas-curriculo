@@ -129,6 +129,62 @@ export function createResumeStore(storage, { now = () => new Date().toISOString(
     return saveResume({ ...copy, title: `${displayTitle(original)} (cópia)` })
   }
 
+  /**
+   * Grava `record` como um currículo novo e independente (novo id), com `suffix` no título.
+   * Usado ao guardar as alterações de uma aba em conflito e ao restaurar um backup diferente.
+   */
+  function saveCopy(record, suffix) {
+    const copy = newRecord({ templateId: record.templateId, resume: structuredClone(record.resume) })
+    return saveResume({ ...copy, title: `${displayTitle(record)} ${suffix}` })
+  }
+
+  /** Todos os currículos completos, do mais recente para o mais antigo (para o backup). */
+  function exportRecords() {
+    return listResumes()
+      .map((item) => getResume(item.id))
+      .filter(Boolean)
+  }
+
+  // Conteúdo do currículo (modelo e dados), sem id, título nem datas.
+  const contentKey = (record) => JSON.stringify([record.templateId, normalizeResume(record.resume)])
+  const sameContent = (a, b) => a.title === b.title && contentKey(a) === contentKey(b)
+
+  /**
+   * O que restaurar um backup faria, sem gravar nada. Cada registro vira:
+   * - 'new': não existe aqui → entra com o mesmo id;
+   * - 'same': já existe igual → é ignorado (evita duplicar);
+   * - 'copy': existe com o mesmo id mas diferente → entra como cópia (nunca substitui o daqui).
+   *   Se algum currículo daqui já tem esse conteúdo (a cópia "(restaurado)" de uma restauração
+   *   anterior), é 'same': restaurar o mesmo arquivo de novo não cria outra cópia.
+   */
+  function planImport(records) {
+    let contents = null
+    const hasContent = (record) => {
+      contents ??= new Set(exportRecords().map(contentKey))
+      return contents.has(contentKey(record))
+    }
+    return records.map((record) => {
+      const existing = getResume(record.id)
+      if (!existing) return { record, action: 'new' }
+      return { record, action: sameContent(existing, record) || hasContent(record) ? 'same' : 'copy' }
+    })
+  }
+
+  /**
+   * Restaura o que `planImport` decidiu. Para no primeiro erro de gravação (ex.: sem espaço):
+   * o que já entrou fica, e o resultado diz quantos faltaram. Retorna { imported, failed }.
+   */
+  function importPlan(plan) {
+    let imported = 0
+    const pendingItems = plan.filter((item) => item.action !== 'same')
+    for (const { record, action } of pendingItems) {
+      const saved = action === 'new' ? saveResume(record) : saveCopy(record, '(restaurado)')
+      if (!saved) return { imported, failed: pendingItems.length - imported }
+      imported++
+    }
+    return { imported, failed: 0 }
+  }
+
   function moveLegacyToBackup(raw) {
     if (writeText(LEGACY_BACKUP_KEY, raw, storage)) removeKey(LEGACY_KEY, storage)
   }
@@ -208,6 +264,10 @@ export function createResumeStore(storage, { now = () => new Date().toISOString(
     saveResume,
     deleteResume,
     duplicateResume,
+    saveCopy,
+    exportRecords,
+    planImport,
+    importPlan,
     migrateLegacyDraft,
     getUnmigratedLegacy,
   }

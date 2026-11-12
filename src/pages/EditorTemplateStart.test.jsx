@@ -95,7 +95,7 @@ describe('escolher um modelo fora do editor (/editor?modelo=…)', () => {
     })
     renderAt('/editor?modelo=moderno')
     await waitFor(() => expect(currentPath()).toBe('/curriculos'))
-    expect(screen.getByRole('status')).toHaveTextContent('Não foi possível salvar neste navegador')
+    expect(screen.getByText(/^Não foi possível salvar neste navegador/)).toHaveAttribute('role', 'status')
     expect(localStorage.getItem(RESUME_PREFIX + existing.id)).toBe(before)
   })
 })

@@ -1,0 +1,77 @@
+/* Cópia de segurança: bloco discreto no fim da lista de currículos */
+.panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.text {
+  max-width: 62ch;
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* O seletor de arquivo do navegador fica oculto; o botão "Restaurar de um arquivo" o abre */
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.preview {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--gray-200);
+  border-left: 3px solid var(--blue-700);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.previewTitle {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.previewList {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+}
+
+.message {
+  font-size: var(--text-sm);
+  color: var(--gray-700);
+}
+
+.message:empty {
+  display: none;
+}
+
+.message[data-error] {
+  font-weight: 500;
+  color: var(--danger);
+}
