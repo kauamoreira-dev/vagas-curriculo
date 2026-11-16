@@ -25,6 +25,74 @@
 }
 
 /*
+ * Linux e Android não têm o Georgia: sem estas reservas, o título caía num serif qualquer, mudava
+ * de quebra quando a Newsreader chegava e o CLS da página inicial passava de 0,1. O Chromium no
+ * Linux usa o Liberation Serif (mesmas larguras do Times New Roman) e o Android, o Noto Serif.
+ * Larguras medidas com o título da página inicial; a altura vem da Newsreader (0,735 e 0,265 em).
+ */
+@font-face {
+  font-family: 'Newsreader Fallback Linux';
+  src: local('Liberation Serif'), local('LiberationSerif');
+  size-adjust: 108.5%;
+  ascent-override: 67.7%;
+  descent-override: 24.4%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Newsreader Fallback Linux';
+  font-style: italic;
+  src: local('Liberation Serif Italic'), local('LiberationSerif-Italic');
+  size-adjust: 104.5%;
+  ascent-override: 70.3%;
+  descent-override: 25.4%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Newsreader Fallback Android';
+  src: local('Noto Serif'), local('NotoSerif-Regular');
+  size-adjust: 92.2%;
+  ascent-override: 79.7%;
+  descent-override: 28.7%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Newsreader Fallback Android';
+  font-style: italic;
+  src: local('Noto Serif Italic'), local('NotoSerif-Italic');
+  size-adjust: 89.8%;
+  ascent-override: 81.8%;
+  descent-override: 29.5%;
+  line-gap-override: 0%;
+}
+
+/*
+ * O mesmo para o texto (Public Sans): o system-ui do Linux é o DejaVu Sans, bem mais largo, e o
+ * parágrafo da página inicial perdia linhas quando a Public Sans chegava. Larguras medidas com o
+ * texto de peso normal da página inicial; a altura vem da Public Sans (0,95 e 0,225 em).
+ * Windows e macOS não trazem essas fontes: neles a ordem de reserva continua a mesma de antes.
+ */
+@font-face {
+  font-family: 'Public Sans Fallback Linux';
+  src: local('DejaVu Sans'), local('DejaVuSans');
+  size-adjust: 91.4%;
+  ascent-override: 103.9%;
+  descent-override: 24.6%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Public Sans Fallback Android';
+  src: local('Roboto'), local('Roboto-Regular');
+  size-adjust: 103.2%;
+  ascent-override: 92.1%;
+  descent-override: 21.8%;
+  line-gap-override: 0%;
+}
+
+/*
  * Tokens de design do Currículo Tapajós — direção "Margem": a folha é a superfície (branco e
  * neutros com leve viés azul), a margem é onde o produto orienta, e o azul da marca fica para ação.
  * Os modelos de currículo definem as próprias cores: estes tokens não mudam o PDF.
@@ -57,8 +125,8 @@
   --success-bg: #e6f4f1;
 
   /* Tipografia */
-  --font-display: 'Newsreader', 'Newsreader Fallback', 'Georgia', serif;
-  --font-body: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Newsreader', 'Newsreader Fallback', 'Newsreader Fallback Linux', 'Newsreader Fallback Android', 'Georgia', serif;
+  --font-body: 'Public Sans', 'Public Sans Fallback Linux', 'Public Sans Fallback Android', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'Consolas', monospace;
 
   --text-xs: 0.75rem;

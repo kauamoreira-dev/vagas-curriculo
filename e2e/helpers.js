@@ -45,9 +45,16 @@ export function pdfPages(buffer) {
   for (const match of source.matchAll(/(\d+) 0 obj([\s\S]*?)endobj/g)) objects.set(match[1], match[2])
 
   function streamOf(body = '') {
-    const stream = body.match(/stream\r?\n([\s\S]*?)\r?\nendstream/)
-    if (!stream) return ''
-    const raw = Buffer.from(stream[1], 'latin1')
+    const start = body.match(/stream\r?\n/)
+    if (!start) return ''
+    // Corta pelo /Length do dicionário: um stream compactado pode terminar no byte \r, que o
+    // delimitador "\r?\nendstream" engoliria, deixando o stream um byte menor.
+    const length = body.slice(0, start.index).match(/\/Length (\d+)(?!\d| \d+ R)/)?.[1]
+    const data =
+      length === undefined
+        ? body.match(/stream\r?\n([\s\S]*?)\r?\nendstream/)[1]
+        : body.slice(start.index + start[0].length, start.index + start[0].length + Number(length))
+    const raw = Buffer.from(data, 'latin1')
     return (/FlateDecode/.test(body) ? inflateSync(raw) : raw).toString('latin1')
   }
 
